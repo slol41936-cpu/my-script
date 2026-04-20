@@ -12,7 +12,7 @@
         statusDot.style.background = '#22c55e';
 
         grabInterval = setInterval(() => {
-            // ১. অটো রিফ্রেশ (BANK ট্যাব ক্লিক)
+            // ১. অটো রিফ্রেশ
             const tabs = document.querySelectorAll('.van-tabs__nav *'); 
             tabs.forEach(tab => {
                 if (tab.innerText && tab.innerText.includes('BANK')) {
@@ -25,24 +25,20 @@
             orders.forEach(order => {
                 const orderText = order.innerText;
 
-                // ফিক্স ১: নিখুঁত অ্যামাউন্ট চেক (Exact Match)
-                // এটি নিশ্চিত করবে যে ১০০০ লিখলে শুধু ১০০০ ই ধরবে, ১১০ বা ১১০০ ধরবে না
-                const isExactAmount = new RegExp('₹\\s*' + targetAmount + '(\\s|\\n|$)').test(orderText);
+                // --- এখানে ফিক্স করা হয়েছে ---
+                // এটি নিশ্চিত করবে যে ₹১০০০ থাকলে শুধু ১০০০ ই ধরবে। 
+                // ১১০, ১১০০ বা অন্য কিছু থাকলে সেটাকে রিজেক্ট করবে।
+                const amountPattern = new RegExp('₹\\s*' + targetAmount + '(\\s|\\n|$)');
+                const isExactMatch = amountPattern.test(orderText);
 
-                if (isExactAmount) {
-                    
+                if (isExactMatch) {
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
                     
                     if (buyBtn) {
-                        // অর্ডার পাওয়া গেছে! রিফ্রেশ বন্ধ করা হলো
                         stopAutoGrab(); 
-                        
-                        // ফিক্স ২: অর্ডার ধরার সাথে সাথে প্যানেল স্ক্রিন থেকে হাইড করা
-                        panel.style.display = 'none';
-                        
-                        buyBtn.click(); // ট্যাপ করল
-                        console.log("Success! Order Grabbed.");
-                        
+                        panel.style.display = 'none'; // প্যানেল হাইড
+                        buyBtn.click(); 
+                        console.log("Success! Grabbed EXACT: " + targetAmount);
                         alert("অর্ডার ধরা হয়েছে! এখন পেমেন্ট সম্পন্ন করুন।");
                     }
                 }
@@ -53,14 +49,12 @@
     function stopAutoGrab() {
         running = false;
         clearInterval(grabInterval);
-        
         document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
-        
         statusText.textContent = 'System Paused';
         statusDot.style.background = '#ef4444';
     }
 
-    // প্যানেল ডিজাইন (আপনার দেওয়া কোড অনুযায়ী)
+    // প্যানেল ডিজাইন (আপনার অরিজিনাল ডিজাইন রাখা হয়েছে)
     const panel = document.createElement('div');
     panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif;";
     panel.innerHTML = `
