@@ -3,22 +3,7 @@
     let running = false;
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
-    
-    // লক সিস্টেম সরিয়ে দেওয়া হয়েছে (isAllowedUser এখন সবসময় true)
     let isAllowedUser = true; 
-
-    const sound = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
-    sound.loop = true;
-    sound.volume = 1;
-
-    function playAutoStopSound() {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-        setTimeout(() => {
-            sound.pause();
-            sound.currentTime = 0;
-        }, 2000);
-    }
 
     function isTargetAvailable() {
         return document.querySelector(`.${TARGET_CLASS}`) !== null;
@@ -28,166 +13,74 @@
         panel.style.display = isTargetAvailable() ? 'block' : 'none';
     }
 
-    function getAllowedAmount() {
-        return amountInput.value.trim();
-    }
-
-    function filterAmount() {
-        if (!isTargetAvailable()) {
-            stopFilter(true);
-            updatePanelVisibility();
-            return;
-        }
-        const allowed = getAllowedAmount();
-        document.querySelectorAll(`.${TARGET_CLASS} *`).forEach(el => {
-            if (el.closest(`.${PANEL_CLASS}`)) return;
-            if (el.innerText && el.innerText.includes('₹')) {
-                if (
-                    (el.innerText.includes(`₹${allowed}`) || el.innerText.includes(`₹ ${allowed}`)) &&
-                    !el.innerText.includes(`₹${allowed}0`) &&
-                    !el.innerText.includes(`₹ ${allowed}0`)
-                ) {
-                    el.style.display = '';
-                } else if (el.innerText.match(/₹\s*\d+/)) {
-                    el.style.display = 'none';
-                }
-            }
-        });
-    }
-
     function startFilter() {
         if (running) return;
-        if (!isTargetAvailable()) {
-            updatePanelVisibility();
-            return;
-        }
+        if (!isTargetAvailable()) return;
         running = true;
-        filterAmount();
-        observer = new MutationObserver(() => {
-            updatePanelVisibility();
-            filterAmount();
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        statusText.textContent = 'Active';
+        
+        // বার বার চেক করার জন্য লুপ
+        observer = setInterval(() => {
+            const allowed = amountInput.value.trim();
+            const items = document.querySelectorAll(`.${TARGET_CLASS} > *`);
+
+            items.forEach(el => {
+                const text = el.innerText;
+                if (text.includes('₹')) {
+                    // শুধু নির্দিষ্ট টাকার অর্ডারগুলো রাখা
+                    if (text.includes(`₹${allowed}`) && !text.includes(`₹${allowed}0`)) {
+                        el.style.display = '';
+                        
+                        // --- অটোমেটিক ক্লিক করার অংশ ---
+                        const buyBtn = el.querySelector('button') || el.querySelector('.btn') || el;
+                        if(buyBtn) {
+                            buyBtn.click(); 
+                            console.log(allowed + " টাকার অর্ডার ধরা হয়েছে!");
+                        }
+                    } else {
+                        el.style.display = 'none'; // অন্যগুলো হাইড করা
+                    }
+                }
+            });
+        }, 500); // প্রতি আধা সেকেন্ডে চেক করবে
+
+        statusText.textContent = 'Active & Grabbing';
         statusDot.style.background = '#22c55e';
     }
 
-    function stopFilter(isAuto = false) {
+    function stopFilter() {
         if (!running) return;
         running = false;
-        if (observer) observer.disconnect();
-        const target = document.querySelector(`.${TARGET_CLASS}`);
-        if (target) {
-            target.querySelectorAll('*').forEach(el => {
-                if (el.closest(`.${PANEL_CLASS}`)) return;
-                el.style.display = '';
-            });
-        }
+        clearInterval(observer);
+        
+        document.querySelectorAll(`.${TARGET_CLASS} > *`).forEach(el => el.style.display = '');
         statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
-        if (isAuto) playAutoStopSound();
     }
 
-    // প্যানেল তৈরি
+    // প্যানেল তৈরি (আগের মতোই থাকবে)
     const panel = document.createElement('div');
-    panel.className = PANEL_CLASS;
-    panel.style.cssText = `
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 14px;
-        width: 220px;
-        font-family: system-ui;
-        box-shadow: 0 12px 28px rgba(0,0,0,0.15);
-        z-index: 999999;
-        display: none;
+    panel.style.cssText = "position: fixed; bottom: 24px; right: 24px; background: #fff; border-radius: 12px; padding: 14px; width: 220px; box-shadow: 0 12px 28px rgba(0,0,0,0.2); z-index: 999999;";
+    
+    panel.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold;">
+            <span>AR Wallet Auto</span>
+            <span id="s-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+        </div>
+        <input type="number" id="amt" value="1000" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px;">
+        <div style="display: flex; gap: 8px;">
+            <button id="s-btn" style="flex: 1; background: #22c55e; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer;">Start</button>
+            <button id="p-btn" style="flex: 1; background: #ef4444; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer;">Stop</button>
+        </div>
+        <div id="s-txt" style="margin-top: 10px; font-size: 12px; text-align: center; color: #6b7280;">Stopped</div>
     `;
 
-    const header = document.createElement('div');
-    header.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        font-weight: 600;
-        font-size: 14px;
-    `;
-    header.textContent = 'AR Wallet';
-
-    const statusDot = document.createElement('span');
-    statusDot.style.cssText = `
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #ef4444;
-    `;
-    header.appendChild(statusDot);
-
-    const amountInput = document.createElement('input');
-    amountInput.type = 'number';
-    amountInput.value = '1000';
-    amountInput.style.cssText = `
-        width: 100%;
-        padding: 6px 8px;
-        margin-bottom: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 13px;
-    `;
-
-    const btnWrap = document.createElement('div');
-    btnWrap.style.cssText = `display: flex; gap: 8px;`;
-
-    const startBtn = document.createElement('button');
-    startBtn.textContent = 'Start';
-    startBtn.style.cssText = `
-        flex: 1;
-        background: #22c55e;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 0;
-        font-size: 13px;
-        cursor: pointer;
-    `;
-
-    const stopBtn = document.createElement('button');
-    stopBtn.textContent = 'Stop';
-    stopBtn.style.cssText = `
-        flex: 1;
-        background: #ef4444;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 0;
-        font-size: 13px;
-        cursor: pointer;
-    `;
-
-    const statusText = document.createElement('div');
-    statusText.style.cssText = `
-        margin-top: 10px;
-        font-size: 12px;
-        text-align: center;
-        color: #6b7280;
-    `;
-
-    statusText.textContent = 'Stopped';
-    startBtn.onclick = startFilter;
-    stopBtn.onclick = () => stopFilter(false);
-
-    btnWrap.appendChild(startBtn);
-    btnWrap.appendChild(stopBtn);
-    panel.appendChild(header);
-    panel.appendChild(amountInput);
-    panel.appendChild(btnWrap);
-    panel.appendChild(statusText);
     document.body.appendChild(panel);
+    const amountInput = panel.querySelector('#amt');
+    const statusDot = panel.querySelector('#s-dot');
+    const statusText = panel.querySelector('#s-txt');
 
-    const globalObserver = new MutationObserver(updatePanelVisibility);
-    globalObserver.observe(document.body, { childList: true, subtree: true });
-    updatePanelVisibility();
+    panel.querySelector('#s-btn').onclick = startFilter;
+    panel.querySelector('#p-btn').onclick = stopFilter;
+
+    setInterval(updatePanelVisibility, 1000);
 })();
- 
