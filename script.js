@@ -1,88 +1,229 @@
 (function () {
-    let grabInterval = null;
+    let observer = null;
     let running = false;
-    const TARGET_LIST_CLASS = 'x-buyList-list'; 
 
-    // ফানি সাউন্ড ইফেক্ট (অর্ডার ধরলে বাজবে)
-    const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
+    const PANEL_CLASS = 'amount-filter-panel';
+    const TARGET_CLASS = 'x-buyList-list';
 
-    function startAutoGrab() {
-        if (running) return;
-        running = true;
+    const allowedMembers = [
+        "22801760"
+    ];
 
-        const targetAmount = parseInt(amountInput.value.trim()); 
-        statusText.textContent = 'Turbo Searching: ' + targetAmount;
-        statusDot.style.background = '#22c55e';
+    let isAllowedUser = false;
 
-        grabInterval = setInterval(() => {
-            // ১. অটো রিফ্রেশ (BANK ট্যাব)
-            const tabs = document.querySelectorAll('.van-tabs__nav *'); 
-            tabs.forEach(tab => {
-                if (tab.innerText && tab.innerText.includes('BANK')) {
-                    tab.click(); 
-                }
-            });
+    try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
+        if (memberId && allowedMembers.includes(String(memberId))) {
+            isAllowedUser = true;
+        }
+    } catch (e) {}
 
-            // ২. অর্ডার স্ক্যান
-            const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
-            orders.forEach(order => {
-                const orderText = order.innerText;
-                
-                // শুধুমাত্র সংখ্যাগুলো আলাদা করা
-                const numbersFound = orderText.replace(/,/g, '').match(/\d+/g);
-                
-                if (numbersFound) {
-                    // একদম নিখুঁত অ্যামাউন্ট চেক
-                    const hasExactMatch = numbersFound.some(num => parseInt(num) === targetAmount);
+    const sound = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
+    sound.loop = true;
+    sound.volume = 1;
 
-                    if (hasExactMatch) {
-                        const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
-                        
-                        if (buyBtn) {
-                            stopAutoGrab(); 
-                            panel.style.display = 'none'; // প্যানেল অটো হাইড
-                            
-                            // ফানি সাউন্ড বাজানো
-                            successSound.play();
-                            
-                            // সরাসরি ক্লিক (কোনো বিরক্তিকর Alert আসবে না)
-                            buyBtn.click(); 
-                            console.log("Success! Grabbed: " + targetAmount);
-                        }
-                    }
-                }
-            });
-        }, 800); // আরও ফাস্ট করার জন্য ০.৮ সেকেন্ড দেওয়া হয়েছে
+    function playAutoStopSound() {
+        sound.currentTime = 0;
+        sound.play().catch(() => {});
+        setTimeout(() => {
+            sound.pause();
+            sound.currentTime = 0;
+        }, 2000);
     }
 
-    function stopAutoGrab() {
+    function isTargetAvailable() {
+        return document.querySelector(`.${TARGET_CLASS}`) !== null;
+    }
+
+    function updatePanelVisibility() {
+        panel.style.display = isTargetAvailable() ? 'block' : 'none';
+    }
+
+    function getAllowedAmount() {
+        return amountInput.value.trim();
+    }
+
+    function filterAmount() {
+        if (!isTargetAvailable()) {
+            stopFilter(true);
+            updatePanelVisibility();
+            return;
+        }
+
+        const allowed = getAllowedAmount();
+
+        document.querySelectorAll(`.${TARGET_CLASS} *`).forEach(el => {
+            if (el.closest(`.${PANEL_CLASS}`)) return;
+
+            if (el.innerText && el.innerText.includes('₹')) {
+                if (
+                    (el.innerText.includes(`₹${allowed}`) || el.innerText.includes(`₹ ${allowed}`)) &&
+                    !el.innerText.includes(`₹${allowed}0`) &&
+                    !el.innerText.includes(`₹ ${allowed}0`)
+                ) {
+                    el.style.display = '';
+                } else if (el.innerText.match(/₹\s*\d+/)) {
+                    el.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    function startFilter() {
+        if (!isAllowedUser || running) return;
+        if (!isTargetAvailable()) {
+            updatePanelVisibility();
+            return;
+        }
+
+        running = true;
+        filterAmount();
+
+        observer = new MutationObserver(() => {
+            updatePanelVisibility();
+            filterAmount();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        statusText.textContent = 'Active';
+        statusDot.style.background = '#22c55e';
+    }
+
+    function stopFilter(isAuto = false) {
+        if (!running) return;
         running = false;
-        clearInterval(grabInterval);
+
+        if (observer) observer.disconnect();
+
+        const target = document.querySelector(`.${TARGET_CLASS}`);
+        if (target) {
+            target.querySelectorAll('*').forEach(el => {
+                if (el.closest(`.${PANEL_CLASS}`)) return;
+                el.style.display = '';
+            });
+        }
+
         statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
+
+        if (isAuto) playAutoStopSound();
     }
 
-    // প্যানেল ডিজাইন
     const panel = document.createElement('div');
-    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif;";
-    panel.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <b style="font-size: 14px;">AR Wallet Turbo</b>
-            <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
-        </div>
-        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center; font-size: 16px; font-weight: bold;">
-        <div style="display: flex; gap: 5px;">
-            <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold;">Start</button>
-            <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold;">Stop</button>
-        </div>
-        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">Waiting for target...</p>
+    panel.className = PANEL_CLASS;
+    panel.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 14px;
+        width: 220px;
+        font-family: system-ui;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+        z-index: 999999;
+        display: none;
     `;
+
+    const header = document.createElement('div');
+    header.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-weight: 600;
+        font-size: 14px;
+    `;
+    header.textContent = 'AR Wallet';
+
+    const statusDot = document.createElement('span');
+    statusDot.style.cssText = `
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ef4444;
+    `;
+    header.appendChild(statusDot);
+
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.value = '1000';
+    amountInput.style.cssText = `
+        width: 100%;
+        padding: 6px 8px;
+        margin-bottom: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 13px;
+    `;
+
+    const btnWrap = document.createElement('div');
+    btnWrap.style.cssText = `display: flex; gap: 8px;`;
+
+    const startBtn = document.createElement('button');
+    startBtn.textContent = 'Start';
+    startBtn.style.cssText = `
+        flex: 1;
+        background: #22c55e;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 0;
+        font-size: 13px;
+        cursor: pointer;
+    `;
+
+    const stopBtn = document.createElement('button');
+    stopBtn.textContent = 'Stop';
+    stopBtn.style.cssText = `
+        flex: 1;
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 0;
+        font-size: 13px;
+        cursor: pointer;
+    `;
+
+    const statusText = document.createElement('div');
+    statusText.style.cssText = `
+        margin-top: 10px;
+        font-size: 12px;
+        text-align: center;
+        color: #6b7280;
+    `;
+
+    if (!isAllowedUser) {
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        startBtn.style.opacity = '0.5';
+        stopBtn.style.opacity = '0.5';
+        statusText.textContent = 'You are not allowed. Contact admin';
+    } else {
+        statusText.textContent = 'Stopped';
+    }
+
+    startBtn.onclick = startFilter;
+    stopBtn.onclick = () => stopFilter(false);
+
+    btnWrap.appendChild(startBtn);
+    btnWrap.appendChild(stopBtn);
+
+    panel.appendChild(header);
+    panel.appendChild(amountInput);
+    panel.appendChild(btnWrap);
+    panel.appendChild(statusText);
+
     document.body.appendChild(panel);
 
-    const amountInput = panel.querySelector('#amtInp');
-    const statusDot = panel.querySelector('#led');
-    const statusText = panel.querySelector('#txtStat');
+    const globalObserver = new MutationObserver(updatePanelVisibility);
+    globalObserver.observe(document.body, { childList: true, subtree: true });
 
-    panel.querySelector('#btnStart').onclick = startAutoGrab;
-    panel.querySelector('#btnStop').onclick = stopAutoGrab;
+    updatePanelVisibility();
 })();
