@@ -1,86 +1,75 @@
 (function () {
-    let observer = null;
+    let grabInterval = null;
     let running = false;
-    const PANEL_CLASS = 'amount-filter-panel';
-    const TARGET_CLASS = 'x-buyList-list';
-    let isAllowedUser = true; 
+    const TARGET_LIST_CLASS = 'x-buyList-list'; // সাইটের লিস্টের মেইন ক্লাস
 
-    function isTargetAvailable() {
-        return document.querySelector(`.${TARGET_CLASS}`) !== null;
-    }
-
-    function updatePanelVisibility() {
-        panel.style.display = isTargetAvailable() ? 'block' : 'none';
-    }
-
-    function startFilter() {
+    function startAutoGrab() {
         if (running) return;
-        if (!isTargetAvailable()) return;
         running = true;
-        
-        // বার বার চেক করার জন্য লুপ
-        observer = setInterval(() => {
-            const allowed = amountInput.value.trim();
-            const items = document.querySelectorAll(`.${TARGET_CLASS} > *`);
 
-            items.forEach(el => {
-                const text = el.innerText;
-                if (text.includes('₹')) {
-                    // শুধু নির্দিষ্ট টাকার অর্ডারগুলো রাখা
-                    if (text.includes(`₹${allowed}`) && !text.includes(`₹${allowed}0`)) {
-                        el.style.display = '';
-                        
-                        // --- অটোমেটিক ক্লিক করার অংশ ---
-                        const buyBtn = el.querySelector('button') || el.querySelector('.btn') || el;
-                        if(buyBtn) {
-                            buyBtn.click(); 
-                            console.log(allowed + " টাকার অর্ডার ধরা হয়েছে!");
-                        }
-                    } else {
-                        el.style.display = 'none'; // অন্যগুলো হাইড করা
+        const targetAmount = amountInput.value.trim();
+        statusText.textContent = 'Searching & Tapping...';
+        statusDot.style.background = '#22c55e';
+
+        // প্রতি ৫০০ মিলি-সেকেন্ডে (সেকেন্ডে ২ বার) চেক করবে
+        grabInterval = setInterval(() => {
+            const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
+            
+            orders.forEach(order => {
+                const orderText = order.innerText;
+
+                // ১. চেক করছে নির্দিষ্ট টাকার অর্ডার কি না (যেমন ₹১০০০)
+                if (orderText.includes('₹' + targetAmount) && !orderText.includes('₹' + targetAmount + '0')) {
+                    order.style.display = ''; // ওটাকে দেখাবে
+                    
+                    // ২. ওই অর্ডারের ভেতরে থাকা 'Buy' বাটনে ট্যাপ করা
+                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
+                    
+                    if (buyBtn) {
+                        buyBtn.click(); // অটোমেটিক ট্যাপ
+                        console.log("Target Found! Tapping on: ₹" + targetAmount);
                     }
+                } else {
+                    // অন্য টাকার অর্ডারগুলো হাইড করে দেবে যাতে কনফিউশন না হয়
+                    order.style.display = 'none';
                 }
             });
-        }, 500); // প্রতি আধা সেকেন্ডে চেক করবে
-
-        statusText.textContent = 'Active & Grabbing';
-        statusDot.style.background = '#22c55e';
+        }, 500);
     }
 
-    function stopFilter() {
+    function stopAutoGrab() {
         if (!running) return;
         running = false;
-        clearInterval(observer);
+        clearInterval(grabInterval);
         
-        document.querySelectorAll(`.${TARGET_CLASS} > *`).forEach(el => el.style.display = '');
+        // সব অর্ডার আবার ফিরিয়ে আনা
+        document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
+        
         statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
     }
 
-    // প্যানেল তৈরি (আগের মতোই থাকবে)
+    // প্যানেল ডিজাইন (আপনার ছবির মতো)
     const panel = document.createElement('div');
-    panel.style.cssText = "position: fixed; bottom: 24px; right: 24px; background: #fff; border-radius: 12px; padding: 14px; width: 220px; box-shadow: 0 12px 28px rgba(0,0,0,0.2); z-index: 999999;";
-    
+    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.2); z-index: 1000000; width: 220px; font-family: sans-serif;";
     panel.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold;">
-            <span>AR Wallet Auto</span>
-            <span id="s-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <b style="font-size: 14px;">AR Wallet Auto</b>
+            <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
         </div>
-        <input type="number" id="amt" value="1000" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px;">
-        <div style="display: flex; gap: 8px;">
-            <button id="s-btn" style="flex: 1; background: #22c55e; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer;">Start</button>
-            <button id="p-btn" style="flex: 1; background: #ef4444; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer;">Stop</button>
+        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center; font-size: 16px;">
+        <div style="display: flex; gap: 5px;">
+            <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer;">Start</button>
+            <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer;">Stop</button>
         </div>
-        <div id="s-txt" style="margin-top: 10px; font-size: 12px; text-align: center; color: #6b7280;">Stopped</div>
+        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">Ready</p>
     `;
-
     document.body.appendChild(panel);
-    const amountInput = panel.querySelector('#amt');
-    const statusDot = panel.querySelector('#s-dot');
-    const statusText = panel.querySelector('#s-txt');
 
-    panel.querySelector('#s-btn').onclick = startFilter;
-    panel.querySelector('#p-btn').onclick = stopFilter;
+    const amountInput = panel.querySelector('#amtInp');
+    const statusDot = panel.querySelector('#led');
+    const statusText = panel.querySelector('#txtStat');
 
-    setInterval(updatePanelVisibility, 1000);
+    panel.querySelector('#btnStart').onclick = startAutoGrab;
+    panel.querySelector('#btnStop').onclick = stopAutoGrab;
 })();
