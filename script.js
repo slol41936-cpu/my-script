@@ -5,12 +5,7 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
-    // 🔥 এখানে তোমাদের ID বসাও
-    const allowedMembers = [
-        "11603833",   // তোমার ID
-        "22801760",   // Friend 1
-        ""    // Friend 2
-    ];
+    const allowedMembers = ["11603833"];
 
     function getMemberId() {
         try {
@@ -27,58 +22,41 @@
         }
     }
 
-    const memberId = getMemberId();
-    const isAllowedUser = allowedMembers.includes(memberId);
-
-    console.log("Detected ID:", memberId);
-    console.log("Allowed:", isAllowedUser);
-
-    const sound = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
-    sound.loop = true;
-    sound.volume = 1;
-
-    function playAutoStopSound() {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-        setTimeout(() => {
-            sound.pause();
-            sound.currentTime = 0;
-        }, 2000);
-    }
+    const isAllowedUser = allowedMembers.includes(getMemberId());
 
     function isTargetAvailable() {
-        return document.querySelector(`.${TARGET_CLASS}`) !== null;
-    }
-
-    function updatePanelVisibility() {
-        panel.style.display = isTargetAvailable() ? 'block' : 'none';
+        return document.querySelector(`.${TARGET_CLASS}`);
     }
 
     function getAllowedAmount() {
-        return amountInput.value.trim();
+        return parseInt(amountInput.value.trim() || "0");
+    }
+
+    // 🔥 Strong amount detect (regex)
+    function extractAmount(text) {
+        const match = text.match(/₹\s*(\d+)/);
+        return match ? parseInt(match[1]) : null;
     }
 
     function filterAmount() {
-        if (!isTargetAvailable()) {
-            stopFilter(true);
-            updatePanelVisibility();
-            return;
-        }
+        const target = isTargetAvailable();
+        if (!target) return;
 
         const allowed = getAllowedAmount();
 
-        document.querySelectorAll(`.${TARGET_CLASS} *`).forEach(el => {
+        target.querySelectorAll("*").forEach(el => {
             if (el.closest(`.${PANEL_CLASS}`)) return;
 
-            if (el.innerText && el.innerText.includes('₹')) {
-                if (
-                    (el.innerText.includes(`₹${allowed}`) || el.innerText.includes(`₹ ${allowed}`)) &&
-                    !el.innerText.includes(`₹${allowed}0`) &&
-                    !el.innerText.includes(`₹ ${allowed}0`)
-                ) {
-                    el.style.display = '';
-                } else if (el.innerText.match(/₹\s*\d+/)) {
-                    el.style.display = 'none';
+            const text = el.innerText;
+            if (!text) return;
+
+            const amount = extractAmount(text);
+
+            if (amount !== null) {
+                if (amount === allowed) {
+                    el.style.display = "";
+                } else {
+                    el.style.display = "none";
                 }
             }
         });
@@ -87,158 +65,80 @@
     function startFilter() {
         if (!isAllowedUser || running) return;
 
-        if (!isTargetAvailable()) {
-            updatePanelVisibility();
-            return;
-        }
+        const target = isTargetAvailable();
+        if (!target) return;
 
         running = true;
-        filterAmount();
 
+        // 🔥 fast interval refresh (bank/order update fix)
+        window.filterInterval = setInterval(filterAmount, 500);
+
+        // 🔥 observer stronger
         observer = new MutationObserver(() => {
-            updatePanelVisibility();
             filterAmount();
         });
 
-        observer.observe(document.body, {
+        observer.observe(target, {
             childList: true,
             subtree: true
         });
 
         statusText.textContent = 'Active';
-        statusDot.style.background = '#22c55e';
+        statusDot.style.background = 'green';
     }
 
-    function stopFilter(isAuto = false) {
-        if (!running) return;
+    function stopFilter() {
         running = false;
 
         if (observer) observer.disconnect();
+        clearInterval(window.filterInterval);
 
-        const target = document.querySelector(`.${TARGET_CLASS}`);
+        const target = isTargetAvailable();
         if (target) {
-            target.querySelectorAll('*').forEach(el => {
-                if (el.closest(`.${PANEL_CLASS}`)) return;
-                el.style.display = '';
+            target.querySelectorAll("*").forEach(el => {
+                el.style.display = "";
             });
         }
 
         statusText.textContent = 'Stopped';
-        statusDot.style.background = '#ef4444';
-
-        if (isAuto) playAutoStopSound();
+        statusDot.style.background = 'red';
     }
 
+    // UI
     const panel = document.createElement('div');
     panel.className = PANEL_CLASS;
     panel.style.cssText = `
         position: fixed;
-        bottom: 24px;
-        right: 24px;
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 14px;
-        width: 220px;
-        font-family: system-ui;
-        box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 10px;
         z-index: 999999;
-        display: none;
+        border-radius: 10px;
+        width: 200px;
     `;
-
-    const header = document.createElement('div');
-    header.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        font-weight: 600;
-        font-size: 14px;
-    `;
-    header.textContent = 'AR Wallet';
-
-    const statusDot = document.createElement('span');
-    statusDot.style.cssText = `
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #ef4444;
-    `;
-    header.appendChild(statusDot);
 
     const amountInput = document.createElement('input');
     amountInput.type = 'number';
     amountInput.value = '1000';
-    amountInput.style.cssText = `
-        width: 100%;
-        padding: 6px 8px;
-        margin-bottom: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 13px;
-    `;
-
-    const btnWrap = document.createElement('div');
-    btnWrap.style.cssText = `display: flex; gap: 8px;`;
+    amountInput.style.width = '100%';
 
     const startBtn = document.createElement('button');
     startBtn.textContent = 'Start';
-    startBtn.style.cssText = `
-        flex: 1;
-        background: #22c55e;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 0;
-        font-size: 13px;
-        cursor: pointer;
-    `;
 
     const stopBtn = document.createElement('button');
     stopBtn.textContent = 'Stop';
-    stopBtn.style.cssText = `
-        flex: 1;
-        background: #ef4444;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 0;
-        font-size: 13px;
-        cursor: pointer;
-    `;
 
     const statusText = document.createElement('div');
-    statusText.style.cssText = `
-        margin-top: 10px;
-        font-size: 12px;
-        text-align: center;
-        color: #6b7280;
-    `;
-
-    if (!isAllowedUser) {
-        startBtn.disabled = true;
-        stopBtn.disabled = true;
-        startBtn.style.opacity = '0.5';
-        stopBtn.style.opacity = '0.5';
-        statusText.textContent = 'Not allowed';
-    } else {
-        statusText.textContent = 'Stopped';
-    }
+    const statusDot = document.createElement('div');
 
     startBtn.onclick = startFilter;
-    stopBtn.onclick = () => stopFilter(false);
+    stopBtn.onclick = stopFilter;
 
-    btnWrap.appendChild(startBtn);
-    btnWrap.appendChild(stopBtn);
-
-    panel.appendChild(header);
     panel.appendChild(amountInput);
-    panel.appendChild(btnWrap);
+    panel.appendChild(startBtn);
+    panel.appendChild(stopBtn);
     panel.appendChild(statusText);
 
     document.body.appendChild(panel);
-
-    const globalObserver = new MutationObserver(updatePanelVisibility);
-    globalObserver.observe(document.body, { childList: true, subtree: true });
-
-    updatePanelVisibility();
 })();
