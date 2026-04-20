@@ -5,19 +5,33 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
+    // 🔥 এখানে তোমাদের ID বসাও
     const allowedMembers = [
-        "22801760"
+        "11603833",   // তোমার ID
+        "22801760",   // Friend 1
+        ""    // Friend 2
     ];
 
-    let isAllowedUser = false;
-
-    try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
-        if (memberId && allowedMembers.includes(String(memberId))) {
-            isAllowedUser = true;
+    function getMemberId() {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+            return String(
+                userInfo?.value?.memberId ||
+                userInfo?.value?.memberld ||
+                userInfo?.memberId ||
+                userInfo?.memberld ||
+                ""
+            );
+        } catch (e) {
+            return "";
         }
-    } catch (e) {}
+    }
+
+    const memberId = getMemberId();
+    const isAllowedUser = allowedMembers.includes(memberId);
+
+    console.log("Detected ID:", memberId);
+    console.log("Allowed:", isAllowedUser);
 
     const sound = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
     sound.loop = true;
@@ -72,6 +86,7 @@
 
     function startFilter() {
         if (!isAllowedUser || running) return;
+
         if (!isTargetAvailable()) {
             updatePanelVisibility();
             return;
@@ -204,7 +219,7 @@
         stopBtn.disabled = true;
         startBtn.style.opacity = '0.5';
         stopBtn.style.opacity = '0.5';
-        statusText.textContent = 'You are not allowed. Contact admin';
+        statusText.textContent = 'Not allowed';
     } else {
         statusText.textContent = 'Stopped';
     }
