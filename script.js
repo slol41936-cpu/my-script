@@ -8,12 +8,11 @@
         running = true;
 
         const targetAmount = amountInput.value.trim();
-        statusText.textContent = 'Refreshing & Grabbing...';
+        statusText.textContent = 'Searching...';
         statusDot.style.background = '#22c55e';
 
         grabInterval = setInterval(() => {
-            // ১. অটো রিফ্রেশ করার জন্য 'BANK' বা নির্দিষ্ট ট্যাবে ক্লিক করা
-            // স্ক্রিনশট অনুযায়ী 'BANK' লেখা এলিমেন্টটি খুঁজে বের করে ক্লিক করবে
+            // ১. অটো রিফ্রেশ (BANK ট্যাব ক্লিক)
             const tabs = document.querySelectorAll('.van-tabs__nav *'); 
             tabs.forEach(tab => {
                 if (tab.innerText && tab.innerText.includes('BANK')) {
@@ -27,37 +26,42 @@
                 const orderText = order.innerText;
 
                 if (orderText.includes('₹' + targetAmount) && !orderText.includes('₹' + targetAmount + '0')) {
-                    order.style.display = ''; 
                     
-                    // 'Buy' বাটনে অটো ট্যাপ
+                    // 'Buy' বাটন খুঁজে বের করা
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
+                    
                     if (buyBtn) {
-                        buyBtn.click();
-                        console.log("Order Tapped: ₹" + targetAmount);
+                        // অর্ডার পাওয়া গেছে! এখন ক্লিক করার আগে অটো-রিফ্রেশ বন্ধ করা হবে
+                        stopAutoGrab(); // এখানে সিস্টেম অফ হয়ে যাবে যাতে রিফ্রেশ না হয়
+                        
+                        buyBtn.click(); // এবার অর্ডারটি ধরবে
+                        console.log("Success! Order Grabbed, stopping system.");
+                        
+                        // পেমেন্ট করার জন্য আপনাকে সময় দেবে
+                        alert("অর্ডার ধরা হয়েছে! এখন পেমেন্ট সম্পন্ন করুন।");
                     }
-                } else {
-                    order.style.display = 'none';
                 }
             });
-        }, 800); // প্রতি ০.৮ সেকেন্ডে রিফ্রেশ এবং স্ক্যান করবে
+        }, 1000); // ১ সেকেন্ড পর পর রিফ্রেশ করবে
     }
 
     function stopAutoGrab() {
-        if (!running) return;
         running = false;
         clearInterval(grabInterval);
         
+        // সব অর্ডার আবার ফিরিয়ে আনা
         document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
-        statusText.textContent = 'Stopped';
+        
+        statusText.textContent = 'System Paused';
         statusDot.style.background = '#ef4444';
     }
 
-    // প্যানেল কোড
+    // প্যানেল ডিজাইন
     const panel = document.createElement('div');
     panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif;";
     panel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <b style="font-size: 14px;">AR Wallet Turbo</b>
+            <b style="font-size: 14px;">AR Wallet Pro</b>
             <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center;">
@@ -65,7 +69,7 @@
             <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 10px; border-radius: 8px;">Start</button>
             <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px;">Stop</button>
         </div>
-        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">Waiting...</p>
+        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">Ready</p>
     `;
     document.body.appendChild(panel);
 
@@ -74,5 +78,5 @@
     const statusText = panel.querySelector('#txtStat');
 
     panel.querySelector('#btnStart').onclick = startAutoGrab;
-    panel.querySelector('#btnStop').onclick = stopAutoGrab;
+    panel.querySelector('#btnStop').onclick = () => stopAutoGrab();
 })();
