@@ -12,41 +12,45 @@
         statusDot.style.background = '#22c55e';
 
         grabInterval = setInterval(() => {
-            // ১. আগের মতো 'BANK' অপশনে দ্রুত ট্যাপ করে রিফ্রেশ করা
-            const allElements = document.querySelectorAll('*');
-            allElements.forEach(el => {
-                if (el.innerText && el.innerText.trim() === 'BANK') {
-                    el.click(); 
+            // ১. রিফ্রেশ করার জন্য 'BANK' ট্যাবে ক্লিক (আরও উন্নত পদ্ধতি)
+            const tabs = document.querySelectorAll('.van-tab__text, .van-tab, span, div');
+            tabs.forEach(tab => {
+                if (tab.innerText && tab.innerText.trim() === 'BANK') {
+                    tab.click(); 
                 }
             });
 
-            // ২. অর্ডার স্ক্যান এবং ট্যাপ
+            // ২. অর্ডার স্ক্যান এবং নিখুঁত ট্যাপ
             const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
             orders.forEach(order => {
                 const orderText = order.innerText;
                 
-                // নিখুঁতভাবে অ্যামাউন্ট চেক (যেমন: ₹১০০০ ই খুঁজবে, ১১০০ বা ১১০ নয়)
-                if (orderText.includes('₹' + targetAmount) && !orderText.includes('₹' + targetAmount + '0')) {
+                // আপনার টাইপ করা ১০০০ এবং অর্ডারের ১০০০ একদম এক কি না চেক করা
+                // এটি ১১০ বা ১১০০ কে এড়িয়ে যাবে
+                const priceMatch = orderText.match(/₹\s*(\d+)/);
+                if (priceMatch && priceMatch[1] === targetAmount) {
                     
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
                     
                     if (buyBtn) {
-                        // অর্ডার পাওয়ার সাথে সাথে রিফ্রেশ বন্ধ করে ট্যাপ করবে
-                        stopAutoGrab(); 
-                        buyBtn.click(); 
+                        // অর্ডার পাওয়ার সাথে সাথে রিফ্রেশ অফ করবে
+                        clearInterval(grabInterval);
+                        running = false;
                         
-                        // প্যানেল হাইড করা যাতে পেমেন্টে সমস্যা না হয়
+                        buyBtn.click(); // ট্যাপ করল
+                        
+                        // প্যানেল লুকানো
                         panel.style.display = 'none';
                         
                         console.log("Matched & Tapped: ₹" + targetAmount);
-                        alert("অর্ডার ধরা হয়েছে! পেমেন্ট কমপ্লিট করুন।");
+                        alert("অর্ডার ধরা হয়েছে! পেমেন্ট পেজে যান।");
                     }
                 } else {
-                    // টার্গেট ছাড়া বাকিগুলো স্ক্রিন থেকে সরিয়ে রাখা যাতে সিস্টেম ফাস্ট থাকে
+                    // টার্গেট ছাড়া বাকিগুলো স্ক্রিন থেকে সরিয়ে রাখা
                     order.style.display = 'none';
                 }
             });
-        }, 600); // ০.৬ সেকেন্ড পর পর রিফ্রেশ (খুবই ফাস্ট)
+        }, 1000); // ১ সেকেন্ড পর পর রিফ্রেশ
     }
 
     function stopAutoGrab() {
@@ -58,18 +62,18 @@
 
     // প্যানেল ডিজাইন
     const panel = document.createElement('div');
-    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.4); z-index: 1000000; width: 220px; font-family: sans-serif; border: 2px solid #eee;";
+    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 25px rgba(0,0,0,0.5); z-index: 1000000; width: 220px; font-family: sans-serif; border: 1px solid #ddd;";
     panel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <b style="font-size: 14px; color: #333;">AR Wallet Turbo</b>
             <div id="led" style="width: 12px; height: 12px; border-radius: 50%; background: red;"></div>
         </div>
-        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold;">
-        <div style="display: flex; gap: 5px;">
+        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold;">
+        <div style="display: flex; gap: 8px;">
             <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">START</button>
             <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">STOP</button>
         </div>
-        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #888;">System Ready</p>
+        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #888;">Ready to Grab</p>
     `;
     document.body.appendChild(panel);
 
