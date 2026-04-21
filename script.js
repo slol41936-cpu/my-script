@@ -1,141 +1,126 @@
+
 (function () {
-    // === কনফিগারেশন এবং সেটিংস ===
-    const ALLOWED_MEMBERS ="22801760"// এখানে আপনার মেম্বার আইডিগুলো থাকবে
-    const TARGET_CLASS = 'x-buyList-list';
-    const PANEL_CLASS = 'ar-wallet-pro-panel';
-    
+    let grabInterval = null;
     let observer = null;
     let running = false;
-    let isAllowedUser = false;
+    const PANEL_CLASS = 'amount-filter-panel';
+    const TARGET_LIST_CLASS = 'x-buyList-list'; 
 
-    // ১. ইউজার ভেরিফিকেশন (একদম শুরুতে)
-    try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const memberId = userInfo?.value?.memberId || userInfo?.value?.memberld;
-        if (memberId && ALLOWED_MEMBERS.includes(String(memberId))) {
-            isAllowedUser = true;
-        }
-    } catch (e) {
-        console.error("User info verification failed.");
+    const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
+    const stopAlarm = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
+
+    function playAutoStopSound() {
+        stopAlarm.currentTime = 0;
+        stopAlarm.play().catch(() => {});
+        setTimeout(() => { stopAlarm.pause(); }, 2000);
     }
 
-    // ২. সাউন্ড সিস্টেম সেটআপ
-    const sound = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
-    sound.volume = 1;
-
-    function playAlert() {
-        sound.play().catch(() => {});
-        setTimeout(() => { sound.pause(); sound.currentTime = 0; }, 2000);
+    function isTargetAvailable() {
+        return document.querySelector(`.${TARGET_LIST_CLASS}`) !== null;
     }
 
-    // ৩. ফিল্টারিং লজিক (নিখুঁতভাবে অ্যামাউন্ট খোঁজা)
-    function applyFilter() {
-        const targetList = document.querySelector(`.${TARGET_CLASS}`);
-        if (!targetList) {
-            if (running) stopFilter(true);
-            return;
-        }
-
-        const inputAmount = amountInput.value.trim();
-        if (!inputAmount) return;
-
-        // লিস্টের ভেতরের সব এলিমেন্ট লুপ করা
-        const items = targetList.querySelectorAll(':scope > *'); 
-        items.forEach(el => {
-            const text = el.innerText || "";
-            // টাকার চিহ্ন এবং সঠিক অ্যামাউন্ট চেক (যেন ১০০০ চাইলে ১০০০০ না দেখায়)
-            const regex = new RegExp(`₹\\s*${inputAmount}(?!\\d)`, 'g');
-            
-            if (regex.test(text)) {
-                el.style.display = ''; // ম্যাচ করলে দেখাবে
-            } else {
-                el.style.display = 'none'; // ম্যাচ না করলে হাইড
-            }
-        });
+    function updatePanelVisibility() {
+        panel.style.display = isTargetAvailable() ? 'block' : 'none';
     }
 
-    // ৪. স্টার্ট এবং স্টপ ফাংশন
-    function startFilter() {
-        if (!isAllowedUser || running) return;
+    function startAutoGrab() {
+        if (running || !isTargetAvailable()) return;
         running = true;
-        
-        applyFilter();
-        observer = new MutationObserver(applyFilter);
-        observer.observe(document.body, { childList: true, subtree: true });
 
+        const targetAmount = parseInt(amountInput.value.trim()); 
+        statusText.textContent = 'Turbo Active: ' + targetAmount;
         statusDot.style.background = '#22c55e';
-        statusText.textContent = 'ফিল্টার চলছে...';
-        startBtn.disabled = true;
-        startBtn.style.opacity = '0.5';
+
+        grabInterval = setInterval(() => {
+
+            // BANK refresh
+            const tabs = document.querySelectorAll('.van-tabs__nav *'); 
+            tabs.forEach(tab => {
+                if (tab.innerText && tab.innerText.includes('BANK')) tab.click(); 
+            });
+
+            // 🔥 FIXED PART START
+            const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
+
+            orders.forEach(order => {
+                const text = order.innerText;
+
+                // ✅ শুধু ₹ amount detect
+                const match = text.match(/₹\s*(\d+)/);
+
+                if (!match) {
+                    order.style.display = "none";
+                    return;
+                }
+
+                const amount = parseInt(match[1]);
+
+                if (amount === targetAmount) {
+
+                    const buyBtn = order.querySelector('button') || 
+                                   order.querySelector('.van-button') || 
+                                   order.querySelector('[class*="buy"]');
+
+                    if (buyBtn) {
+                        stopAutoGrab(false);
+                        panel.style.display = 'none';
+                        successSound.play();
+                        buyBtn.click();
+                    }
+
+                    order.style.display = "";
+                } else {
+                    order.style.display = "none";
+                }
+            });
+            // 🔥 FIXED PART END
+
+        }, 800);
+
+        observer = new MutationObserver(() => {
+            if (!isTargetAvailable()) stopAutoGrab(true);
+            updatePanelVisibility();
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    function stopFilter(isAuto = false) {
+    function stopAutoGrab(isAuto = false) {
+        if (!running) return;
         running = false;
+        clearInterval(grabInterval);
         if (observer) observer.disconnect();
-
-        // সব আইটেম আবার শো করা
-        const items = document.querySelectorAll(`.${TARGET_CLASS} *`);
-        items.forEach(el => el.style.display = '');
-
+        
+        document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
+        
+        statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
-        statusText.textContent = isAuto ? 'লিস্ট পাওয়া যায়নি!' : 'বন্ধ আছে';
-        startBtn.disabled = false;
-        startBtn.style.opacity = '1';
-
-        if (isAuto) playAlert();
+        if (isAuto) playAutoStopSound();
     }
 
-    // ৫. প্যানেল ডিজাইন (UI)
     const panel = document.createElement('div');
     panel.className = PANEL_CLASS;
-    panel.style.cssText = `
-        position: fixed; bottom: 20px; right: 20px; width: 240px;
-        background: #ffffff; border-radius: 15px; padding: 15px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000000;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        border: 1px solid #eee; display: none;
-    `;
-
+    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif; display: none;";
     panel.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <strong style="font-size:14px; color:#333;">AR WALLET PRO</strong>
-            <div id="statusDot" style="width:10px; height:10px; border-radius:50%; background:#ef4444;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <b style="font-size: 14px;">AR Wallet Turbo Pro</b>
+            <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
         </div>
-        <input type="number" id="amountInput" value="1000" placeholder="টাকার পরিমাণ লিখুন" 
-            style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; outline:none; box-sizing:border-box;">
-        <div style="display:flex; gap:10px;">
-            <button id="startBtn" style="flex:1; padding:10px; background:#22c55e; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">START</button>
-            <button id="stopBtn" style="flex:1; padding:10px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">STOP</button>
+        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center; font-size: 18px; font-weight: bold;">
+        <div style="display: flex; gap: 5px;">
+            <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">Start</button>
+            <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">Stop</button>
         </div>
-        <div id="statusText" style="font-size:11px; text-align:center; margin-top:10px; color:#888;">প্রস্তুত</div>
+        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">System Ready</p>
     `;
-
     document.body.appendChild(panel);
 
-    // এলিমেন্ট রেফারেন্স
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const amountInput = document.getElementById('amountInput');
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
+    const amountInput = panel.querySelector('#amtInp');
+    const statusDot = panel.querySelector('#led');
+    const statusText = panel.querySelector('#txtStat');
 
-    // বাটন ইভেন্ট
-    startBtn.onclick = startFilter;
-    stopBtn.onclick = () => stopFilter(false);
+    panel.querySelector('#btnStart').onclick = startAutoGrab;
+    panel.querySelector('#btnStop').onclick = () => stopAutoGrab(false);
 
-    // প্যানেল অটো হাইড/শো চেক
-    setInterval(() => {
-        const targetExist = document.querySelector(`.${TARGET_CLASS}`);
-        panel.style.display = targetExist ? 'block' : 'none';
-    }, 1000);
-
-    // অনুমতি না থাকলে লক করে দেওয়া
-    if (!isAllowedUser) {
-        panel.style.opacity = '0.8';
-        startBtn.disabled = true;
-        stopBtn.disabled = true;
-        statusText.textContent = "অ্যাক্সেস নেই! অ্যাডমিনের সাথে যোগাযোগ করুন।";
-        statusText.style.color = "red";
-    }
-
+    setInterval(updatePanelVisibility, 1000);
 })();
