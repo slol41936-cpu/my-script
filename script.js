@@ -5,7 +5,6 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_LIST_CLASS = 'x-buyList-list'; 
 
-    // ফানি সাকসেস সাউন্ড এবং অটো-স্টপ অ্যালার্ম
     const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
     const stopAlarm = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
 
@@ -19,7 +18,6 @@
         return document.querySelector(`.${TARGET_LIST_CLASS}`) !== null;
     }
 
-    // স্মার্ট ভিজিবিলিটি: টার্গেট লিস্ট থাকলে প্যানেল দেখাবে
     function updatePanelVisibility() {
         panel.style.display = isTargetAvailable() ? 'block' : 'none';
     }
@@ -32,39 +30,57 @@
         statusText.textContent = 'Turbo Active: ' + targetAmount;
         statusDot.style.background = '#22c55e';
 
-        // ১. অটো রিফ্রেশ ও ক্লিক ইন্টারভাল
         grabInterval = setInterval(() => {
-            // BANK ট্যাবে ক্লিক করে রিফ্রেশ
+
+            // BANK refresh
             const tabs = document.querySelectorAll('.van-tabs__nav *'); 
             tabs.forEach(tab => {
                 if (tab.innerText && tab.innerText.includes('BANK')) tab.click(); 
             });
 
-            // অর্ডার স্ক্যান এবং নিখুঁত অ্যামাউন্ট ফিল্টার
+            // 🔥 FIXED PART START
             const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
+
             orders.forEach(order => {
-                const orderText = order.innerText;
-                const numbers = orderText.replace(/,/g, '').match(/\d+/g);
-                
-                if (numbers && numbers.some(num => parseInt(num) === targetAmount)) {
-                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
+                const text = order.innerText;
+
+                // ✅ শুধু ₹ amount detect
+                const match = text.match(/₹\s*(\d+)/);
+
+                if (!match) {
+                    order.style.display = "none";
+                    return;
+                }
+
+                const amount = parseInt(match[1]);
+
+                if (amount === targetAmount) {
+
+                    const buyBtn = order.querySelector('button') || 
+                                   order.querySelector('.van-button') || 
+                                   order.querySelector('[class*="buy"]');
+
                     if (buyBtn) {
-                        stopAutoGrab(false); // কাজ হয়ে গেলে অফ
-                        panel.style.display = 'none'; // প্যানেল হাইড
-                        successSound.play(); // ফানি সাউন্ড
-                        buyBtn.click(); // অটো ট্যাপ
+                        stopAutoGrab(false);
+                        panel.style.display = 'none';
+                        successSound.play();
+                        buyBtn.click();
                     }
+
+                    order.style.display = "";
                 } else {
-                    order.style.display = 'none'; // অন্য অ্যামাউন্ট হাইড
+                    order.style.display = "none";
                 }
             });
+            // 🔥 FIXED PART END
+
         }, 800);
 
-        // ২. রিয়েল-টাইম ফিল্টারিং (MutationObserver)
         observer = new MutationObserver(() => {
             if (!isTargetAvailable()) stopAutoGrab(true);
             updatePanelVisibility();
         });
+
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
@@ -74,7 +90,6 @@
         clearInterval(grabInterval);
         if (observer) observer.disconnect();
         
-        // সব আইটেম আবার শো করা
         document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
         
         statusText.textContent = 'Stopped';
@@ -82,7 +97,6 @@
         if (isAuto) playAutoStopSound();
     }
 
-    // প্যানেল ডিজাইন ও কন্ট্রোল
     const panel = document.createElement('div');
     panel.className = PANEL_CLASS;
     panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif; display: none;";
@@ -107,6 +121,5 @@
     panel.querySelector('#btnStart').onclick = startAutoGrab;
     panel.querySelector('#btnStop').onclick = () => stopAutoGrab(false);
 
-    // ইনিশিয়াল চেকিং
     setInterval(updatePanelVisibility, 1000);
 })();
