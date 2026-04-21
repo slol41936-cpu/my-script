@@ -1,45 +1,56 @@
 (function () {
     let grabInterval = null;
     let running = false;
-    const TARGET_CLASS = 'x-buyList-list'; // অর্ডারের মেইন লিস্ট
+    const TARGET_CLASS = 'x-buyList-list'; 
 
     function startAuto() {
         if (running) return;
         running = true;
         
-        const targetAmount = "1000"; // আপনি যেটা চাইলেন, ফিক্সড হাজার টাকা
-        statusText.textContent = 'Searching: ₹' + targetAmount;
+        const targetAmount = "1000"; 
+        statusText.textContent = 'Turbo Mode: Finding ₹' + targetAmount;
         statusDot.style.background = '#22c55e';
 
+        // গতির পাওয়ার বাড়ানো হয়েছে (প্রতি ২০০ মিলি-সেকেন্ডে রিফ্রেশ)
         grabInterval = setInterval(() => {
-            // ১. BANK ট্যাবে ক্লিক করে রিফ্রেশ করা (যাতে নতুন অর্ডার আসে)
-            const tabs = document.querySelectorAll('.van-tab');
-            tabs.forEach(tab => {
-                if (tab.innerText.includes('BANK')) tab.click();
-            });
+            // ১. সুপার ফাস্ট ট্যাব রিফ্রেশ
+            const tabs = document.querySelectorAll('.van-tab, .van-tab__text');
+            for (let tab of tabs) {
+                if (tab.innerText.includes('BANK')) {
+                    tab.click();
+                    break;
+                }
+            }
 
-            // ২. অর্ডার ফিল্টার ও ট্যাপ
+            // ২. অর্ডার স্ক্যান এবং ছোঁ মেরে ধরা
             const orders = document.querySelectorAll(`.${TARGET_CLASS} > *`);
             
             orders.forEach(order => {
                 const text = order.innerText;
 
-                // চেক করবে শুধু ১০০০ আছে কি না (১১০ বা ১০০ থাকলে ওটা বাদ)
-                if (text.includes('₹' + targetAmount) && !text.includes('₹' + targetAmount + '0') && !text.includes('₹110')) {
-                    order.style.display = ''; // শুধু ১০০০ টাকারটা দেখাবে
+                // একদম নিখুঁত হাজার টাকা ফিল্টার
+                if (text.includes('₹' + targetAmount) && !text.includes('₹' + targetAmount + '0')) {
                     
-                    // সাথে সাথে ট্যাপ (Buy বাটনে ক্লিক)
-                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
+                    // ৩. বাটন খোঁজা এবং হাই-স্পিড ক্লিক
+                    const buyBtn = order.querySelector('button') || 
+                                   order.querySelector('.van-button') || 
+                                   order.querySelector('.x-buyList-btn');
+
                     if (buyBtn) {
+                        // অর্ডার পাওয়া মাত্রই অন্য সব কাজ বন্ধ করে আগে ওটা ধরবে
                         buyBtn.click();
-                        stopAuto(); // অর্ডার ধরলে রিফ্রেশ বন্ধ
-                        panel.style.display = 'none'; // প্যানেল গায়েব
+                        buyBtn.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+                        
+                        stopAuto(); 
+                        panel.style.display = 'none';
+                        console.log("BOOM! Order Grabbed.");
                     }
                 } else {
-                    order.style.display = 'none'; // ১০০০ না হলে ওটা স্ক্রিন থেকে গায়েব
+                    // ১০০০ বাদে বাকি সব সাথে সাথে ডিলিট (যাতে সিস্টেম ফাস্ট থাকে)
+                    order.remove(); 
                 }
             });
-        }, 500); // আরও দ্রুত (সেকেন্ডে ২ বার চেক করবে)
+        }, 300); // এটি সেকেন্ডে ৩ বারের বেশি চেক করবে!
     }
 
     function stopAuto() {
@@ -47,23 +58,22 @@
         clearInterval(grabInterval);
         statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
-        document.querySelectorAll(`.${TARGET_CLASS} > *`).forEach(el => el.style.display = '');
     }
 
     // আপনার সেই বক্স ডিজাইন
     const panel = document.createElement('div');
-    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif;";
+    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 30px rgba(0,0,0,0.5); z-index: 1000000; width: 220px; font-family: sans-serif; border: 2px solid #2ecc71;";
     panel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <b>AR Wallet Auto</b>
+            <b style="color: #2ecc71;">AR TURBO V4</b>
             <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
         </div>
-        <div style="text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 10px; color: #333;">₹ 1000 ONLY</div>
+        <div style="text-align: center; font-weight: bold; font-size: 20px; margin-bottom: 15px; color: #333;">₹ 1000</div>
         <div style="display: flex; gap: 5px;">
-            <button id="sBtn" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold;">Start</button>
-            <button id="pBtn" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold;">Stop</button>
+            <button id="sBtn" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">START</button>
+            <button id="pBtn" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">STOP</button>
         </div>
-        <p id="sTxt" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">Ready to Grab</p>
+        <p id="sTxt" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666; font-weight: bold;">POWERED UP</p>
     `;
     document.body.appendChild(panel);
 
