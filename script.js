@@ -1,6 +1,6 @@
 (function () {
     // === কনফিগারেশন এবং সেটিংস ===
-    const ALLOWED_MEMBERS = ["22801760"]; // এখানে আপনার মেম্বার আইডিগুলো থাকবে
+    const ALLOWED_MEMBERS ="22801760"// এখানে আপনার মেম্বার আইডিগুলো থাকবে
     const TARGET_CLASS = 'x-buyList-list';
     const PANEL_CLASS = 'ar-wallet-pro-panel';
     
