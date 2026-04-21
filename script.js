@@ -1,69 +1,84 @@
 (function () {
     let grabInterval = null;
+    let observer = null;
     let running = false;
-    const TARGET_CLASS = 'x-buyList-list'; // অর্ডারের মেইন লিস্ট
+    const TARGET_LIST_CLASS = 'x-buyList-list'; 
+
+    const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
 
     function startAuto() {
         if (running) return;
         running = true;
-        
-        const targetAmount = "1000"; // আপনি যেটা চাইলেন, ফিক্সড হাজার টাকা
-        statusText.textContent = 'Searching: ₹' + targetAmount;
+
+        statusText.textContent = 'Mode: Large (₹1000)';
         statusDot.style.background = '#22c55e';
 
-        grabInterval = setInterval(() => {
-            // ১. BANK ট্যাবে ক্লিক করে রিফ্রেশ করা (যাতে নতুন অর্ডার আসে)
-            const tabs = document.querySelectorAll('.van-tab');
-            tabs.forEach(tab => {
-                if (tab.innerText.includes('BANK')) tab.click();
-            });
+        // ১. শুরুতে একবার 'Large' বাটনে ক্লিক করে দেওয়া
+        const largeBtn = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText.trim() === 'Large');
+        if (largeBtn) largeBtn.click();
 
-            // ২. অর্ডার ফিল্টার ও ট্যাপ
-            const orders = document.querySelectorAll(`.${TARGET_CLASS} > *`);
-            
+        // ২. হাই-স্পিড রিফ্রেশ (BANK ট্যাবে ক্লিক)
+        grabInterval = setInterval(() => {
+            const tabs = document.querySelectorAll('.van-tab, .van-tab__text, .van-tabs__nav *');
+            for (let tab of tabs) {
+                if (tab.innerText && tab.innerText.includes('BANK')) {
+                    tab.click();
+                    break;
+                }
+            }
+        }, 200);
+
+        // ৩. MutationObserver - রিয়েল টাইম ১০০০ টাকা ফিল্টার
+        observer = new MutationObserver(() => {
+            const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
             orders.forEach(order => {
                 const text = order.innerText;
 
-                // চেক করবে শুধু ১০০০ আছে কি না (১১০ বা ১০০ থাকলে ওটা বাদ)
-                if (text.includes('₹' + targetAmount) && !text.includes('₹' + targetAmount + '0') && !text.includes('₹110')) {
-                    order.style.display = ''; // শুধু ১০০০ টাকারটা দেখাবে
+                // নিখুঁত ১০০০ টাকা চেক (১১০ বা ১১০০ বাদ দেবে)
+                if ((text.includes('₹1000') || text.includes('₹ 1000')) && !text.includes('1100') && !text.includes('10000')) {
                     
-                    // সাথে সাথে ট্যাপ (Buy বাটনে ক্লিক)
-                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
+                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
                     if (buyBtn) {
+                        successSound.play();
                         buyBtn.click();
-                        stopAuto(); // অর্ডার ধরলে রিফ্রেশ বন্ধ
-                        panel.style.display = 'none'; // প্যানেল গায়েব
+                        buyBtn.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+                        
+                        stopAuto(); 
+                        panel.style.display = 'none'; 
+                        console.log("Large Order Grabbed: ₹1000");
                     }
                 } else {
-                    order.style.display = 'none'; // ১০০০ না হলে ওটা স্ক্রিন থেকে গায়েব
+                    // ১০০০ না হলে সাথে সাথে স্ক্রিন থেকে রিমুভ
+                    order.remove(); 
                 }
             });
-        }, 500); // আরও দ্রুত (সেকেন্ডে ২ বার চেক করবে)
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function stopAuto() {
         running = false;
-        clearInterval(grabInterval);
+        if (grabInterval) clearInterval(grabInterval);
+        if (observer) observer.disconnect();
         statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
-        document.querySelectorAll(`.${TARGET_CLASS} > *`).forEach(el => el.style.display = '');
     }
 
-    // আপনার সেই বক্স ডিজাইন
+    // প্যানেল ডিজাইন
     const panel = document.createElement('div');
-    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif;";
+    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 30px rgba(0,0,0,0.5); z-index: 1000000; width: 220px; font-family: sans-serif; border: 2px solid #f39c12;";
     panel.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <b>AR Wallet Auto</b>
+            <b style="color: #f39c12;">AR LARGE TURBO</b>
             <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
         </div>
-        <div style="text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 10px; color: #333;">₹ 1000 ONLY</div>
+        <div style="text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 15px; color: #333;">Searching ₹1000</div>
         <div style="display: flex; gap: 5px;">
-            <button id="sBtn" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold;">Start</button>
-            <button id="pBtn" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold;">Stop</button>
+            <button id="sBtn" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">START</button>
+            <button id="pBtn" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;">STOP</button>
         </div>
-        <p id="sTxt" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">Ready to Grab</p>
+        <p id="sTxt" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666; font-weight: bold;">LARGE TAB ACTIVE</p>
     `;
     document.body.appendChild(panel);
 
