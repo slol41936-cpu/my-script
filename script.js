@@ -1,115 +1,141 @@
 (function () {
-    let grabInterval = null;
+    // === কনফিগারেশন এবং সেটিংস ===
+    const ALLOWED_MEMBERS = ["11603833"]; // এখানে আপনার মেম্বার আইডিগুলো থাকবে
+    const TARGET_CLASS = 'x-buyList-list';
+    const PANEL_CLASS = 'ar-wallet-pro-panel';
+    
     let observer = null;
     let running = false;
+    let isAllowedUser = false;
 
-    const TARGET_CLASS = 'x-buyList-list';
-
-    const allowedMembers = ["11603833"];
-
-    function getMemberId() {
-        try {
-            const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-            return String(
-                userInfo?.value?.memberId ||
-                userInfo?.value?.memberld ||
-                ""
-            );
-        } catch {
-            return "";
+    // ১. ইউজার ভেরিফিকেশন (একদম শুরুতে)
+    try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        const memberId = userInfo?.value?.memberId || userInfo?.value?.memberld;
+        if (memberId && ALLOWED_MEMBERS.includes(String(memberId))) {
+            isAllowedUser = true;
         }
+    } catch (e) {
+        console.error("User info verification failed.");
     }
 
-    const isAllowedUser = allowedMembers.includes(getMemberId());
+    // ২. সাউন্ড সিস্টেম সেটআপ
+    const sound = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
+    sound.volume = 1;
 
-    const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
-
-    function isTargetAvailable() {
-        return document.querySelector(`.${TARGET_CLASS}`);
+    function playAlert() {
+        sound.play().catch(() => {});
+        setTimeout(() => { sound.pause(); sound.currentTime = 0; }, 2000);
     }
 
-    function scanAndClick(targetAmount) {
-        const orders = document.querySelectorAll(`.${TARGET_CLASS} > *`);
+    // ৩. ফিল্টারিং লজিক (নিখুঁতভাবে অ্যামাউন্ট খোঁজা)
+    function applyFilter() {
+        const targetList = document.querySelector(`.${TARGET_CLASS}`);
+        if (!targetList) {
+            if (running) stopFilter(true);
+            return;
+        }
 
-        orders.forEach(order => {
-            const text = order.innerText;
+        const inputAmount = amountInput.value.trim();
+        if (!inputAmount) return;
 
-            // ✅ exact ₹ amount
-            const match = text.match(/₹\s*(\d+)/);
-            if (!match) return;
-
-            const amount = parseInt(match[1]);
-
-            if (amount === targetAmount) {
-                const btn = order.querySelector('button') || 
-                            order.querySelector('.van-button') || 
-                            order.querySelector('[class*="buy"]');
-
-                if (btn) {
-                    stop();
-                    panel.style.display = 'none';
-                    successSound.play();
-                    btn.click();
-                }
+        // লিস্টের ভেতরের সব এলিমেন্ট লুপ করা
+        const items = targetList.querySelectorAll(':scope > *'); 
+        items.forEach(el => {
+            const text = el.innerText || "";
+            // টাকার চিহ্ন এবং সঠিক অ্যামাউন্ট চেক (যেন ১০০০ চাইলে ১০০০০ না দেখায়)
+            const regex = new RegExp(`₹\\s*${inputAmount}(?!\\d)`, 'g');
+            
+            if (regex.test(text)) {
+                el.style.display = ''; // ম্যাচ করলে দেখাবে
+            } else {
+                el.style.display = 'none'; // ম্যাচ না করলে হাইড
             }
         });
     }
 
-    function start() {
-        if (!isAllowedUser || running || !isTargetAvailable()) return;
+    // ৪. স্টার্ট এবং স্টপ ফাংশন
+    function startFilter() {
+        if (!isAllowedUser || running) return;
         running = true;
+        
+        applyFilter();
+        observer = new MutationObserver(applyFilter);
+        observer.observe(document.body, { childList: true, subtree: true });
 
-        const targetAmount = parseInt(amountInput.value.trim());
-        statusText.textContent = 'Turbo: ' + targetAmount;
-        statusDot.style.background = 'green';
-
-        grabInterval = setInterval(() => {
-
-            // BANK refresh
-            document.querySelectorAll('.van-tabs__nav *').forEach(tab => {
-                if (tab.innerText?.includes('BANK')) tab.click();
-            });
-
-            scanAndClick(targetAmount);
-
-        }, 500); // ⚡ 0.5 sec
-
-        observer = new MutationObserver(() => {
-            scanAndClick(targetAmount);
-        });
-
-        observer.observe(document.querySelector(`.${TARGET_CLASS}`), {
-            childList: true
-        });
+        statusDot.style.background = '#22c55e';
+        statusText.textContent = 'ফিল্টার চলছে...';
+        startBtn.disabled = true;
+        startBtn.style.opacity = '0.5';
     }
 
-    function stop() {
+    function stopFilter(isAuto = false) {
         running = false;
-        clearInterval(grabInterval);
         if (observer) observer.disconnect();
 
-        statusText.textContent = 'Stopped';
-        statusDot.style.background = 'red';
+        // সব আইটেম আবার শো করা
+        const items = document.querySelectorAll(`.${TARGET_CLASS} *`);
+        items.forEach(el => el.style.display = '');
+
+        statusDot.style.background = '#ef4444';
+        statusText.textContent = isAuto ? 'লিস্ট পাওয়া যায়নি!' : 'বন্ধ আছে';
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
+
+        if (isAuto) playAlert();
     }
 
-    // UI
+    // ৫. প্যানেল ডিজাইন (UI)
     const panel = document.createElement('div');
-    panel.style.cssText = "position:fixed;bottom:20px;right:20px;background:#fff;padding:12px;border-radius:10px;z-index:999999;";
-    
+    panel.className = PANEL_CLASS;
+    panel.style.cssText = `
+        position: fixed; bottom: 20px; right: 20px; width: 240px;
+        background: #ffffff; border-radius: 15px; padding: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000000;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        border: 1px solid #eee; display: none;
+    `;
+
     panel.innerHTML = `
-        <input id="amt" type="number" value="1000" style="width:100%;margin-bottom:5px;">
-        <button id="start">Start</button>
-        <button id="stop">Stop</button>
-        <div id="status">Stopped</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <strong style="font-size:14px; color:#333;">AR WALLET PRO</strong>
+            <div id="statusDot" style="width:10px; height:10px; border-radius:50%; background:#ef4444;"></div>
+        </div>
+        <input type="number" id="amountInput" value="1000" placeholder="টাকার পরিমাণ লিখুন" 
+            style="width:100%; padding:8px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; outline:none; box-sizing:border-box;">
+        <div style="display:flex; gap:10px;">
+            <button id="startBtn" style="flex:1; padding:10px; background:#22c55e; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">START</button>
+            <button id="stopBtn" style="flex:1; padding:10px; background:#ef4444; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">STOP</button>
+        </div>
+        <div id="statusText" style="font-size:11px; text-align:center; margin-top:10px; color:#888;">প্রস্তুত</div>
     `;
 
     document.body.appendChild(panel);
 
-    const amountInput = panel.querySelector('#amt');
-    const statusText = panel.querySelector('#status');
-    const statusDot = panel.querySelector('#status');
+    // এলিমেন্ট রেফারেন্স
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const amountInput = document.getElementById('amountInput');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
 
-    panel.querySelector('#start').onclick = start;
-    panel.querySelector('#stop').onclick = stop;
+    // বাটন ইভেন্ট
+    startBtn.onclick = startFilter;
+    stopBtn.onclick = () => stopFilter(false);
+
+    // প্যানেল অটো হাইড/শো চেক
+    setInterval(() => {
+        const targetExist = document.querySelector(`.${TARGET_CLASS}`);
+        panel.style.display = targetExist ? 'block' : 'none';
+    }, 1000);
+
+    // অনুমতি না থাকলে লক করে দেওয়া
+    if (!isAllowedUser) {
+        panel.style.opacity = '0.8';
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        statusText.textContent = "অ্যাক্সেস নেই! অ্যাডমিনের সাথে যোগাযোগ করুন।";
+        statusText.style.color = "red";
+    }
 
 })();
