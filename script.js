@@ -1,127 +1,115 @@
-
-
 (function () {
     let grabInterval = null;
     let observer = null;
     let running = false;
-    const PANEL_CLASS = 'amount-filter-panel';
-    const TARGET_LIST_CLASS = 'x-buyList-list'; 
+
+    const TARGET_CLASS = 'x-buyList-list';
+
+    const allowedMembers = ["11603833"];
+
+    function getMemberId() {
+        try {
+            const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+            return String(
+                userInfo?.value?.memberId ||
+                userInfo?.value?.memberld ||
+                ""
+            );
+        } catch {
+            return "";
+        }
+    }
+
+    const isAllowedUser = allowedMembers.includes(getMemberId());
 
     const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
-    const stopAlarm = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
-
-    function playAutoStopSound() {
-        stopAlarm.currentTime = 0;
-        stopAlarm.play().catch(() => {});
-        setTimeout(() => { stopAlarm.pause(); }, 2000);
-    }
 
     function isTargetAvailable() {
-        return document.querySelector(`.${TARGET_LIST_CLASS}`) !== null;
+        return document.querySelector(`.${TARGET_CLASS}`);
     }
 
-    function updatePanelVisibility() {
-        panel.style.display = isTargetAvailable() ? 'block' : 'none';
+    function scanAndClick(targetAmount) {
+        const orders = document.querySelectorAll(`.${TARGET_CLASS} > *`);
+
+        orders.forEach(order => {
+            const text = order.innerText;
+
+            // ✅ exact ₹ amount
+            const match = text.match(/₹\s*(\d+)/);
+            if (!match) return;
+
+            const amount = parseInt(match[1]);
+
+            if (amount === targetAmount) {
+                const btn = order.querySelector('button') || 
+                            order.querySelector('.van-button') || 
+                            order.querySelector('[class*="buy"]');
+
+                if (btn) {
+                    stop();
+                    panel.style.display = 'none';
+                    successSound.play();
+                    btn.click();
+                }
+            }
+        });
     }
 
-    function startAutoGrab() {
-        if (running || !isTargetAvailable()) return;
+    function start() {
+        if (!isAllowedUser || running || !isTargetAvailable()) return;
         running = true;
 
-        const targetAmount = parseInt(amountInput.value.trim()); 
-        statusText.textContent = 'Turbo Active: ' + targetAmount;
-        statusDot.style.background = '#22c55e';
+        const targetAmount = parseInt(amountInput.value.trim());
+        statusText.textContent = 'Turbo: ' + targetAmount;
+        statusDot.style.background = 'green';
 
         grabInterval = setInterval(() => {
 
             // BANK refresh
-            const tabs = document.querySelectorAll('.van-tabs__nav *'); 
-            tabs.forEach(tab => {
-                if (tab.innerText && tab.innerText.includes('BANK')) tab.click(); 
+            document.querySelectorAll('.van-tabs__nav *').forEach(tab => {
+                if (tab.innerText?.includes('BANK')) tab.click();
             });
 
-            // 🔥 FIXED PART START
-            const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
+            scanAndClick(targetAmount);
 
-            orders.forEach(order => {
-                const text = order.innerText;
-
-                // ✅ শুধু ₹ amount detect
-                const match = text.match(/₹\s*(\d+)/);
-
-                if (!match) {
-                    order.style.display = "none";
-                    return;
-                }
-
-                const amount = parseInt(match[1]);
-
-                if (amount === targetAmount) {
-
-                    const buyBtn = order.querySelector('button') || 
-                                   order.querySelector('.van-button') || 
-                                   order.querySelector('[class*="buy"]');
-
-                    if (buyBtn) {
-                        stopAutoGrab(false);
-                        panel.style.display = 'none';
-                        successSound.play();
-                        buyBtn.click();
-                    }
-
-                    order.style.display = "";
-                } else {
-                    order.style.display = "none";
-                }
-            });
-            // 🔥 FIXED PART END
-
-        }, 800);
+        }, 500); // ⚡ 0.5 sec
 
         observer = new MutationObserver(() => {
-            if (!isTargetAvailable()) stopAutoGrab(true);
-            updatePanelVisibility();
+            scanAndClick(targetAmount);
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.querySelector(`.${TARGET_CLASS}`), {
+            childList: true
+        });
     }
 
-    function stopAutoGrab(isAuto = false) {
-        if (!running) return;
+    function stop() {
         running = false;
         clearInterval(grabInterval);
         if (observer) observer.disconnect();
-        
-        document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
-        
+
         statusText.textContent = 'Stopped';
-        statusDot.style.background = '#ef4444';
-        if (isAuto) playAutoStopSound();
+        statusDot.style.background = 'red';
     }
 
+    // UI
     const panel = document.createElement('div');
-    panel.className = PANEL_CLASS;
-    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.3); z-index: 1000000; width: 220px; font-family: sans-serif; display: none;";
+    panel.style.cssText = "position:fixed;bottom:20px;right:20px;background:#fff;padding:12px;border-radius:10px;z-index:999999;";
+    
     panel.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <b style="font-size: 14px;">AR Wallet Turbo Pro</b>
-            <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
-        </div>
-        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center; font-size: 18px; font-weight: bold;">
-        <div style="display: flex; gap: 5px;">
-            <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">Start</button>
-            <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">Stop</button>
-        </div>
-        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 10px; color: #666;">System Ready</p>
+        <input id="amt" type="number" value="1000" style="width:100%;margin-bottom:5px;">
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+        <div id="status">Stopped</div>
     `;
+
     document.body.appendChild(panel);
 
-    const amountInput = panel.querySelector('#amtInp');
-    const statusDot = panel.querySelector('#led');
-    const statusText = panel.querySelector('#txtStat');
+    const amountInput = panel.querySelector('#amt');
+    const statusText = panel.querySelector('#status');
+    const statusDot = panel.querySelector('#status');
 
-    panel.querySelector('#btnStart').onclick = startAutoGrab;
-    panel.querySelector('#btnStop').onclick = () => stopAutoGrab(false);
+    panel.querySelector('#start').onclick = start;
+    panel.querySelector('#stop').onclick = stop;
 
-    setInterval(updatePanelVisibility, 1000);
 })();
