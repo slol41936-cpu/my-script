@@ -2,115 +2,129 @@
     let grabInterval = null;
     let observer = null;
     let running = false;
+    const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_LIST_CLASS = 'x-buyList-list'; 
 
-    // সাউন্ড লোড
     const successSound = new Audio("https://www.myinstants.com/media/sounds/funny-notification-sound.mp3");
+    const stopAlarm = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
+
+    function playAutoStopSound() {
+        stopAlarm.currentTime = 0;
+        stopAlarm.play().catch(() => {});
+        setTimeout(() => { stopAlarm.pause(); }, 2000);
+    }
 
     function isTargetAvailable() {
         return document.querySelector(`.${TARGET_LIST_CLASS}`) !== null;
     }
 
-    function startAutoGrab() {
+    function updatePanelVisibility() {
+        panel.style.display = isTargetAvailable() ? 'block' : 'none';
+    }
+
+    function startAutoGrab(mode = 'default') {
         if (running || !isTargetAvailable()) return;
         running = true;
 
         const targetAmount = parseInt(amountInput.value.trim()); 
-        statusText.textContent = 'Searching: ' + targetAmount;
-        statusDot.style.background = '#2ecc71'; // Green
+        statusText.textContent = `Mode: ${mode.toUpperCase()} (${targetAmount})`;
+        statusDot.style.background = '#22c55e';
 
         grabInterval = setInterval(() => {
-            // ১. অটো রিফ্রেশ (BANK ট্যাব ট্রিগার)
+            // ১. অটো রিফ্রেশ
             const tabs = document.querySelectorAll('.van-tabs__nav *'); 
             tabs.forEach(tab => {
-                if (tab.innerText && tab.innerText.includes('BANK')) {
-                    tab.click(); 
-                }
+                if (tab.innerText && tab.innerText.includes('BANK')) tab.click(); 
             });
 
-            // ২. অর্ডার ফিল্টার এবং ইনস্ট্যান্ট ক্লিক
+            // ২. অর্ডার ফিল্টার ও ট্যাপ
             const orders = document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`);
-            
             orders.forEach(order => {
-                const text = order.innerText;
+                const orderText = order.innerText;
+                const numbers = orderText.replace(/,/g, '').match(/\d+/g);
                 
-                // এখানে RegEx আরও শক্তিশালী করা হয়েছে যাতে ১০০০ ছাড়া কিছুই না দেখায়
-                const match = text.match(/₹\s*(\d+)/);
-                const currentPrice = match ? parseInt(match[1]) : 0;
+                if (numbers) {
+                    let isMatch = false;
+                    const firstNum = parseInt(numbers[0]);
 
-                if (currentPrice === targetAmount) {
-                    // যদি ১০০০ টাকার অর্ডার হয় তবেই দেখাবে
-                    order.style.display = "block"; 
-                    
-                    // সাথে সাথে 'Buy' বাটনে ক্লিক করার চেষ্টা করবে
-                    const buyBtn = order.querySelector('.van-button') || 
-                                   order.querySelector('button') || 
-                                   order.querySelector('[class*="buy"]');
-                    
-                    if (buyBtn) {
-                        buyBtn.click(); // ফাস্ট ট্যাপ
-                        successSound.play();
-                        stopAutoGrab(); // অর্ডার ধরলে অফ হয়ে যাবে যাতে ডাবল ক্লিক না হয়
-                        panel.style.display = 'none'; // প্যানেল গায়েব
+                    if (mode === 'default') {
+                        isMatch = numbers.some(num => parseInt(num) === targetAmount);
+                    } else if (mode === 'large') {
+                        isMatch = firstNum >= 5000; // ৫০০০ এর বেশি হলে লার্জ
+                    } else if (mode === 'small') {
+                        isMatch = firstNum > 0 && firstNum <= 500; // ৫০০ এর নিচে হলে স্মল
                     }
-                } else {
-                    // ১০০০ বাদে বাকি সব একদম গায়েব (Hide)
-                    order.style.display = "none";
+
+                    if (isMatch) {
+                        const buyBtn = order.querySelector('button') || order.querySelector('.van-button') || order.querySelector('[class*="buy"]');
+                        if (buyBtn) {
+                            stopAutoGrab(false);
+                            panel.style.display = 'none';
+                            successSound.play();
+                            buyBtn.click();
+                        }
+                    } else {
+                        order.style.display = 'none';
+                    }
                 }
             });
+        }, 800);
 
-        }, 400); // স্পিড আরও বাড়ানো হয়েছে (৪০০ মিলি-সেকেন্ড)
-
-        // রিয়েল টাইম অবজার্ভার
         observer = new MutationObserver(() => {
-            if (!isTargetAvailable()) stopAutoGrab();
+            if (!isTargetAvailable()) stopAutoGrab(true);
+            updatePanelVisibility();
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    function stopAutoGrab() {
+    function stopAutoGrab(isAuto = false) {
         if (!running) return;
         running = false;
         clearInterval(grabInterval);
         if (observer) observer.disconnect();
-        
         document.querySelectorAll(`.${TARGET_LIST_CLASS} > *`).forEach(el => el.style.display = '');
-        
         statusText.textContent = 'Stopped';
-        statusDot.style.background = '#e74c3c'; // Red
+        statusDot.style.background = '#ef4444';
+        if (isAuto) playAutoStopSound();
     }
 
-    // প্যানেল ডিজাইন (আপনার দেওয়া ছবির হুবহু লুক)
+    // প্যানেল ডিজাইন
     const panel = document.createElement('div');
-    panel.style.cssText = "position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 15px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000000; width: 280px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center;";
-    
+    panel.className = PANEL_CLASS;
+    panel.style.cssText = "position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 0 25px rgba(0,0,0,0.3); z-index: 1000000; width: 230px; font-family: sans-serif; display: none;";
     panel.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 10px;">
-            <span style="font-weight: bold; color: #333; font-size: 16px;">AR Wallet</span>
-            <div id="led" style="width: 12px; height: 12px; border-radius: 50%; background: #e74c3c;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <b style="font-size: 14px; color: #333;">AR Wallet Turbo Pro</b>
+            <div id="led" style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div>
         </div>
         
-        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 12px; margin-bottom: 15px; border: 1px solid #eee; border-radius: 10px; text-align: center; font-size: 20px; font-weight: bold; outline: none; background: #f9f9f9;">
-        
-        <div style="display: flex; gap: 10px; padding: 0 5px;">
-            <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px;">Start</button>
-            <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px;">Stop</button>
+        <div style="display: flex; gap: 4px; margin-bottom: 10px;">
+            <button id="btnDef" style="flex: 1; font-size: 10px; padding: 5px; border-radius: 5px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">Default</button>
+            <button id="btnLrg" style="flex: 1; font-size: 10px; padding: 5px; border-radius: 5px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">Large</button>
+            <button id="btnSml" style="flex: 1; font-size: 10px; padding: 5px; border-radius: 5px; border: 1px solid #ddd; background: #f8f9fa; cursor: pointer;">Small</button>
         </div>
-        
-        <div id="txtStat" style="margin-top: 15px; font-size: 13px; color: #888;">Stopped</div>
-    `;
 
+        <input type="number" id="amtInp" value="1000" style="width: 90%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center; font-size: 18px; font-weight: bold;">
+        
+        <div style="display: flex; gap: 5px;">
+            <button id="btnStart" style="flex: 1; background: #2ecc71; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">START</button>
+            <button id="btnStop" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">STOP</button>
+        </div>
+        <p id="txtStat" style="text-align: center; font-size: 11px; margin-top: 8px; color: #666;">Ready</p>
+    `;
     document.body.appendChild(panel);
 
     const amountInput = panel.querySelector('#amtInp');
     const statusDot = panel.querySelector('#led');
     const statusText = panel.querySelector('#txtStat');
 
-    panel.querySelector('#btnStart').onclick = startAutoGrab;
-    panel.querySelector('#btnStop').onclick = stopAutoGrab;
+    // বাটন ইভেন্ট
+    panel.querySelector('#btnStart').onclick = () => startAutoGrab('default');
+    panel.querySelector('#btnDef').onclick = () => { amountInput.value = "1000"; startAutoGrab('default'); };
+    panel.querySelector('#btnLrg').onclick = () => startAutoGrab('large');
+    panel.querySelector('#btnSml').onclick = () => startAutoGrab('small');
+    panel.querySelector('#btnStop').onclick = () => stopAutoGrab(false);
 
-    // প্যানেল ভিজিবিলিটি চেক
-    setInterval(() => {
-        panel.style.display = isTargetAvailable() ? 'block' : 'none';
-    }, 1000);
+    setInterval(updatePanelVisibility, 1000);
 })();
+ 
