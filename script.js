@@ -6,7 +6,6 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
-    // ১. আপনার আইডিগুলো
     const allowedMembers = [
         "21248739",
         "22801760"
@@ -22,7 +21,6 @@
         }
     } catch (e) {}
 
-    // সাউন্ড সেটআপ (আপনার দেওয়া লিঙ্কটি Raw ফরম্যাটে বসানো হয়েছে)
     const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
     sound.loop = false;
     sound.volume = 1;
@@ -30,14 +28,12 @@
     function playNotificationSound() {
         sound.currentTime = 0;
         sound.play().catch(() => {});
-        // সাউন্ডটি ৩ সেকেন্ড পর বন্ধ করার জন্য
         setTimeout(() => {
             sound.pause();
             sound.currentTime = 0;
         }, 3000);
     }
 
-    // ২. অটো পপ-আপ রিমুভাল
     window.alert = function() { return true; };
     window.confirm = function() { return true; };
 
@@ -53,37 +49,39 @@
         return amountInput.value.trim();
     }
 
+    // ফিল্টার লজিক আরও ফাস্ট করা হয়েছে
     function filterAmount() {
-        if (!isTargetAvailable()) return;
+        const list = document.querySelector(`.${TARGET_CLASS}`);
+        if (!list || !running) return;
 
         const allowed = getAllowedAmount();
-        const orders = document.querySelectorAll(`.${TARGET_CLASS} > *`);
+        const orders = list.children;
 
-        orders.forEach(order => {
-            if (order.closest(`.${PANEL_CLASS}`)) return;
-
+        for (let i = 0; i < orders.length; i++) {
+            const order = orders[i];
             const text = order.innerText;
+            
             if (text && text.includes('₹')) {
                 const numbers = text.replace(/,/g, '').match(/\d+/g);
                 const orderAmount = numbers ? numbers[0] : null;
 
-                // নিখুঁত অ্যামাউন্ট চেক এবং সাউন্ড ট্রিগার
                 if (orderAmount === allowed) {
                     order.style.display = '';
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
-                    if (buyBtn && running) {
-                        playNotificationSound(); // অর্ডার ধরলে সাউন্ড বাজবে
-                        buyBtn.click();
+                    
+                    if (buyBtn) {
+                        playNotificationSound();
+                        buyBtn.click(); // ফটাফট ক্লিক
                         stopFilter();
+                        return; // অর্ডার পাওয়া মাত্রই লুপ বন্ধ
                     }
                 } else {
                     order.style.display = 'none';
                 }
             }
-        });
+        }
     }
 
-    // ৩. রিফ্রেশ লজিক (১ সেকেন্ড রেট)
     function startRefresh() {
         refreshInterval = setInterval(() => {
             if (!running) return;
@@ -96,10 +94,14 @@
             const bankTab = Array.from(document.querySelectorAll('.van-tab, .van-tab__text')).find(el => el.innerText.includes('BANK'));
             if (bankTab) bankTab.click();
 
+            // গ্যাপ কমানো হয়েছে যাতে ফটাফট লার্জ ট্যাবে ফিরে আসে
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) largeTab.click();
-            }, 250);
+                
+                // রিফ্রেশ হওয়ার সাথে সাথেই একবার ফিল্টার চেক
+                requestAnimationFrame(filterAmount);
+            }, 150); 
 
         }, 1000); 
     }
@@ -107,16 +109,24 @@
     function startFilter() {
         if (!isAllowedUser || running) return;
         running = true;
+        
+        statusText.textContent = 'Mode: Ultra Fast Active';
+        statusDot.style.background = '#22c55e';
+
         filterAmount();
         startRefresh(); 
 
+        // অবজার্ভার আরও শক্তিশালী করা হয়েছে
         observer = new MutationObserver(() => {
             filterAmount();
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
-        statusText.textContent = 'Mode: 1s + Sound Active';
-        statusDot.style.background = '#22c55e';
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true,
+            characterData: false,
+            attributes: false
+        });
     }
 
     function stopFilter() {
@@ -153,4 +163,3 @@
 
     setInterval(updatePanelVisibility, 1000);
 })();
-    
