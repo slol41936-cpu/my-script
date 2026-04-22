@@ -6,7 +6,7 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
-    const allowedMembers ="22801760" "21248739"      
+    const allowedMembers ="21248739"      
 
     let isAllowedUser = false;
 
