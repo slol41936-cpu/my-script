@@ -7,6 +7,7 @@
     const TARGET_CLASS = 'x-buyList-list';
 
     const allowedMembers ="22801760"
+          allowedMembers ="21248739"             
 
     let isAllowedUser = false;
 
