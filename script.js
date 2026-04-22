@@ -6,7 +6,7 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
-    const allowedMembers ="22801760";
+    const allowedMembers ="22801760"
 
     let isAllowedUser = false;
 
@@ -43,6 +43,7 @@
         return amountInput.value.trim();
     }
 
+    // শুধুমাত্র এই লজিকটি আপডেট করা হয়েছে বড় অ্যামাউন্ট আটকানোর জন্য
     function filterAmount() {
         if (!isTargetAvailable()) {
             stopFilter(true);
@@ -52,19 +53,19 @@
 
         const allowed = getAllowedAmount();
 
-        // ১০০০ টাকা ফিল্টার ও অটো বাই
         document.querySelectorAll(`.${TARGET_CLASS} > *`).forEach(order => {
             if (order.closest(`.${PANEL_CLASS}`)) return;
 
             const text = order.innerText;
             if (text && text.includes('₹')) {
-                if (
-                    (text.includes(`₹${allowed}`) || text.includes(`₹ ${allowed}`)) &&
-                    !text.includes(`₹${allowed}0`)
-                ) {
+                // নম্বরগুলো আলাদা করা যাতে ১১০০ বা ১০০০৫ এর মতো বড় সংখ্যা না ধরে
+                const numbers = text.replace(/,/g, '').match(/\d+/g);
+                const orderAmount = numbers ? numbers[0] : null;
+
+                // একদম নিখুঁত ম্যাচ চেক
+                if (orderAmount === allowed) {
                     order.style.display = '';
                     
-                    // সরাসরি অটো বাই
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     if (buyBtn && running) {
                         buyBtn.click();
@@ -77,20 +78,17 @@
         });
     }
 
-    // শুধুমাত্র BANK রিফ্রেশ এবং Large ট্যাবে থাকা
     function startRefresh() {
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // ১. BANK ট্যাব রিফ্রেশ
             const bankTab = Array.from(document.querySelectorAll('.van-tab, .van-tab__text')).find(el => el.innerText.includes('BANK'));
             if (bankTab) bankTab.click();
 
-            // ২. লার্জ (Large) অপশনে ক্লিক করা যাতে ওখানেই থাকে
             const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
             if (largeTab) largeTab.click();
 
-        }, 700); // স্পিড বাড়িয়ে ০.৭ সেকেন্ড করা হয়েছে
+        }, 700);
     }
 
     function startFilter() {
@@ -194,4 +192,4 @@
 
     updatePanelVisibility();
 })();
-        
+            
