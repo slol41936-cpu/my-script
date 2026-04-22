@@ -22,7 +22,7 @@
         }
     } catch (e) {}
 
-    // ২. অটো পপ-আপ বন্ধ করার লজিক (যাতে কোড না থামে)
+    // ২. অটো পপ-আপ রিমুভাল (যাতে কোনো অ্যালার্ট কাজ না থামায়)
     window.alert = function() { return true; };
     window.confirm = function() { return true; };
 
@@ -52,7 +52,7 @@
                 const numbers = text.replace(/,/g, '').match(/\d+/g);
                 const orderAmount = numbers ? numbers[0] : null;
 
-                // একদম নিখুঁত ১০০০ চেক
+                // নিখুঁত অ্যামাউন্ট চেক (বড় অ্যামাউন্ট সমস্যা সমাধান)
                 if (orderAmount === allowed) {
                     order.style.display = '';
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
@@ -67,12 +67,12 @@
         });
     }
 
-    // ৩. রিফ্রেশ লজিক (টাইম বাড়িয়ে নিরাপদ করা হয়েছে)
+    // ৩. রিফ্রেশ লজিক (১ সেকেন্ড রেট)
     function startRefresh() {
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // যদি ব্লক মেসেজ থাকে, তবে একবার পেজ রিফ্রেশ করবে
+            // ব্লক মেসেজ আসলে অটো রিলোড লজিক
             if (document.body.innerText.includes("contact customer service")) {
                 location.reload();
                 return;
@@ -84,9 +84,9 @@
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) largeTab.click();
-            }, 300);
+            }, 250); // ট্যাব সুইচের মাঝে গ্যাপ কমানো হয়েছে
 
-        }, 1200); // ১.২ সেকেন্ড—এটি সবথেকে নিরাপদ টাইম
+        }, 1000); // আপনার অনুরোধ অনুযায়ী ১ সেকেন্ড করে দেওয়া হলো
     }
 
     function startFilter() {
@@ -100,7 +100,7 @@
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
-        statusText.textContent = 'Mode: Safe Active';
+        statusText.textContent = 'Mode: 1s Active';
         statusDot.style.background = '#22c55e';
     }
 
