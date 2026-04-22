@@ -22,7 +22,22 @@
         }
     } catch (e) {}
 
-    // ২. অটো পপ-আপ রিমুভাল (যাতে কোনো অ্যালার্ট কাজ না থামায়)
+    // সাউন্ড সেটআপ (আপনার দেওয়া লিঙ্কটি Raw ফরম্যাটে বসানো হয়েছে)
+    const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
+    sound.loop = false;
+    sound.volume = 1;
+
+    function playNotificationSound() {
+        sound.currentTime = 0;
+        sound.play().catch(() => {});
+        // সাউন্ডটি ৩ সেকেন্ড পর বন্ধ করার জন্য
+        setTimeout(() => {
+            sound.pause();
+            sound.currentTime = 0;
+        }, 3000);
+    }
+
+    // ২. অটো পপ-আপ রিমুভাল
     window.alert = function() { return true; };
     window.confirm = function() { return true; };
 
@@ -52,11 +67,12 @@
                 const numbers = text.replace(/,/g, '').match(/\d+/g);
                 const orderAmount = numbers ? numbers[0] : null;
 
-                // নিখুঁত অ্যামাউন্ট চেক (বড় অ্যামাউন্ট সমস্যা সমাধান)
+                // নিখুঁত অ্যামাউন্ট চেক এবং সাউন্ড ট্রিগার
                 if (orderAmount === allowed) {
                     order.style.display = '';
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     if (buyBtn && running) {
+                        playNotificationSound(); // অর্ডার ধরলে সাউন্ড বাজবে
                         buyBtn.click();
                         stopFilter();
                     }
@@ -72,7 +88,6 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // ব্লক মেসেজ আসলে অটো রিলোড লজিক
             if (document.body.innerText.includes("contact customer service")) {
                 location.reload();
                 return;
@@ -84,9 +99,9 @@
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) largeTab.click();
-            }, 250); // ট্যাব সুইচের মাঝে গ্যাপ কমানো হয়েছে
+            }, 250);
 
-        }, 1000); // আপনার অনুরোধ অনুযায়ী ১ সেকেন্ড করে দেওয়া হলো
+        }, 1000); 
     }
 
     function startFilter() {
@@ -100,7 +115,7 @@
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
-        statusText.textContent = 'Mode: 1s Active';
+        statusText.textContent = 'Mode: 1s + Sound Active';
         statusDot.style.background = '#22c55e';
     }
 
@@ -138,3 +153,4 @@
 
     setInterval(updatePanelVisibility, 1000);
 })();
+    
