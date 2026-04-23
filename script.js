@@ -42,13 +42,11 @@
         return amountInput.value.trim();
     }
 
-    // অর্ডার মিস হয়েছে কি না চেক করা
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
         return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken");
     }
 
-    // ফিল্টার লজিককে অতি দ্রুত করা হয়েছে
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
@@ -68,21 +66,22 @@
                     
                     if (buyBtn && running) {
                         playNotificationSound();
-                        buyBtn.click(); // ফটাফট ক্লিক
+                        buyBtn.click(); 
                         
-                        // ক্লিক করার পর রিফ্রেশ সাময়িক থামবে ২ সেকেন্ডের জন্য
+                        // রিফ্রেশ সাময়িক বন্ধ রাখা যতক্ষণ না রেজাল্ট আসছে
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
                         setTimeout(() => {
                             if (checkFailure()) {
-                                if (running) startRefresh(); // মিস হলে আবার শুরু
+                                // যদি অর্ডার মিস হয়, অটোমেটিক আবার রিফ্রেশ শুরু
+                                if (running) startRefresh(); 
                             } else if (document.body.innerText.includes("Submit UTR")) {
                                 stopFilter(); // সাকসেস হলে স্টপ
                             } else {
-                                if (running) startRefresh(); // অন্যথায় রিফ্রেশ চালু
+                                if (running) startRefresh(); 
                             }
-                        }, 2000);
+                        }, 2500);
                         return; 
                     }
                 }
@@ -90,36 +89,36 @@
         }
     }
 
+    // অটোমেটিক রিফ্রেশ এবং ট্যাব সুইচিং লজিক
     function startRefresh() {
         if (refreshInterval) clearInterval(refreshInterval);
         
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // যদি পেমেন্ট পেজে পৌঁছে যান
             if (document.body.innerText.includes("Submit UTR")) {
                 stopFilter();
                 return;
             }
 
-            // কাস্টমার সার্ভিস পপ-আপ রিমুভাল
             if (document.body.innerText.includes("contact customer service")) {
                 location.reload();
                 return;
             }
 
-            // আপনি যেই ট্যাবে থাকবেন (UPI/BANK), সেটাকেই রিফ্রেশ করবে
+            // ১. অটোমেটিক BANK বা একটিভ ট্যাব রিফ্রেশ
             const currentTab = document.querySelector('.van-tab--active') || 
                                Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
             if (currentTab) currentTab.click();
 
+            // ২. অটোমেটিক Default এবং Large উভয় জায়গায় চেক করার জন্য সুইচিং
             setTimeout(() => {
+                // প্রথমে ডিফল্ট চেক করবে, তারপর লার্জে ক্লিক করবে
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) largeTab.click();
                 
-                // ব্রাউজারের পরবর্তী ফ্রেমেই ফিল্টার রান করবে
                 requestAnimationFrame(filterAmount);
-            }, 100); // গ্যাপ আরও কমানো হয়েছে
+            }, 150); 
 
         }, 1000); 
     }
@@ -128,7 +127,7 @@
         if (!isAllowedUser || running) return;
         running = true;
         
-        statusText.textContent = 'Mode: Super Aggressive Active';
+        statusText.textContent = 'Mode: Full Auto (Def+Large)';
         statusDot.style.background = '#22c55e';
 
         filterAmount();
@@ -157,7 +156,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 600; font-size: 14px;">
-            AR Wallet Pro <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+            AR Wallet Auto <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 6px 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold;">
         <div style="display: flex; gap: 8px;">
@@ -179,3 +178,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+             
