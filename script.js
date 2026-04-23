@@ -52,14 +52,10 @@
         return amountInput.value.trim();
     }
 
-    // নতুন লজিক: অর্ডার অন্য কেউ নিয়ে নিলে আবার রিফ্রেশ শুরু করা
+    // গুরুত্বপূর্ণ ফিক্স: অর্ডার ফেল হলে অটো চেক করবে
     function checkRetryCondition() {
-        const pageText = document.body.innerText;
-        // যদি অর্ডার কেউ নিয়ে নেয় বা ইরর দেখায়
-        if (pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken")) {
-            if (!refreshInterval && running) {
-                startRefresh(); // আবার রিফ্রেশ শুরু করবে
-            }
+        const pageText = document.body.innerText.toLowerCase();
+        if (pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed")) {
             return true;
         }
         return false;
@@ -69,8 +65,11 @@
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
 
-        // যদি অন্য কেউ নিয়ে নেয় এমন মেসেজ থাকে, তাহলে থামা যাবে না
-        checkRetryCondition();
+        // যদি কোনো কারণে পপ-আপ এসে থাকে যে অর্ডার অন্য কেউ নিয়েছে
+        if (checkRetryCondition()) {
+            if (!refreshInterval) startRefresh(); 
+            return;
+        }
 
         const allowed = getAllowedAmount();
         const orders = list.children;
@@ -91,21 +90,25 @@
                         playNotificationSound();
                         buyBtn.click();
                         
-                        // পেমেন্ট পেজে না যাওয়া পর্যন্ত রিফ্রেশ ইন্টারভাল সাময়িকভাবে থামবে
+                        // এখানে পরিবর্তন: সরাসরি stopFilter না করে রিফ্রেশ সাময়িক বন্ধ রাখা
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // ২.৫ সেকেন্ড পর চেক করবে অর্ডার মিস হয়েছে কি না
+                        // ৩ সেকেন্ড পর চেক করবে অর্ডার সাকসেস হয়েছে কি না
                         setTimeout(() => {
                             if (checkRetryCondition()) {
-                                // অর্ডার মিস হয়েছে, রিফ্রেশ অটো শুরু হবে (উপরের checkRetryCondition থেকে)
+                                // অর্ডার মিস হয়েছে! আবার রিফ্রেশ শুরু করো
+                                if (running) startRefresh();
                             } else {
-                                // যদি পেমেন্ট পেজ (UTR পেজ) চলে আসে, তবেই পুরোপুরি স্টপ হবে
-                                if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Copy Account")) {
+                                // যদি স্ক্রিনে পেমেন্ট পেজের লেখা থাকে, তবেই পুরোপুরি থামবে
+                                if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Transfer")) {
                                     stopFilter();
+                                } else {
+                                    // যদি কোনোটিই না হয়, রিস্ক না নিয়ে রিফ্রেশ চালু রাখো
+                                    if (running) startRefresh();
                                 }
                             }
-                        }, 2500);
+                        }, 3000);
                         return; 
                     }
                 } else {
@@ -121,7 +124,7 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // যদি অলরেডি পেমেন্ট পেজে চলে যান, তবে বন্ধ হবে
+            // পেমেন্ট পেজে পৌঁছালে রিফ্রেশ বন্ধ
             if (document.body.innerText.includes("Submit UTR")) {
                 stopFilter();
                 return;
@@ -200,3 +203,4 @@
 
     setInterval(updatePanelVisibility, 1000);
 })();
+ 
