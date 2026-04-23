@@ -22,7 +22,6 @@
         }
     } catch (e) {}
 
-    // সাউন্ড সেটআপ
     const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
     sound.loop = false;
     sound.volume = 1;
@@ -36,38 +35,23 @@
         }, 3000);
     }
 
-    // ২. অটো পপ-আপ রিমুভাল
     window.alert = function() { return true; };
     window.confirm = function() { return true; };
-
-    function isTargetAvailable() {
-        return document.querySelector(`.${TARGET_CLASS}`) !== null;
-    }
-
-    function updatePanelVisibility() {
-        panel.style.display = isTargetAvailable() ? 'block' : 'none';
-    }
 
     function getAllowedAmount() {
         return amountInput.value.trim();
     }
 
-    function checkRetryCondition() {
-        const pageText = document.body.innerText;
-        if (pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken")) {
-            if (!refreshInterval && running) {
-                startRefresh(); 
-            }
-            return true;
-        }
-        return false;
+    // অর্ডার মিস হয়েছে কি না চেক করা
+    function checkFailure() {
+        const pageText = document.body.innerText.toLowerCase();
+        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken");
     }
 
+    // ফিল্টার লজিককে অতি দ্রুত করা হয়েছে
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
-
-        checkRetryCondition();
 
         const allowed = getAllowedAmount();
         const orders = list.children;
@@ -77,70 +61,65 @@
             const text = order.innerText;
             
             if (text && text.includes('₹')) {
-                const numbers = text.replace(/,/g, '').match(/\d+/g);
-                const orderAmount = numbers ? numbers[0] : null;
+                const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
 
                 if (orderAmount === allowed) {
-                    order.style.display = '';
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
                         playNotificationSound();
-                        buyBtn.click();
+                        buyBtn.click(); // ফটাফট ক্লিক
                         
+                        // ক্লিক করার পর রিফ্রেশ সাময়িক থামবে ২ সেকেন্ডের জন্য
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
                         setTimeout(() => {
-                            if (checkRetryCondition()) {
-                                if (running) startRefresh();
+                            if (checkFailure()) {
+                                if (running) startRefresh(); // মিস হলে আবার শুরু
+                            } else if (document.body.innerText.includes("Submit UTR")) {
+                                stopFilter(); // সাকসেস হলে স্টপ
                             } else {
-                                if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Copy Account")) {
-                                    stopFilter();
-                                } else {
-                                    if (running) startRefresh();
-                                }
+                                if (running) startRefresh(); // অন্যথায় রিফ্রেশ চালু
                             }
-                        }, 2500);
+                        }, 2000);
                         return; 
                     }
-                } else {
-                    order.style.display = 'none';
                 }
             }
         }
     }
 
-    // ৩. রিফ্রেশ লজিক (ট্যাব সিলেকশন এখন ম্যানুয়াল)
     function startRefresh() {
         if (refreshInterval) clearInterval(refreshInterval);
         
         refreshInterval = setInterval(() => {
             if (!running) return;
 
+            // যদি পেমেন্ট পেজে পৌঁছে যান
             if (document.body.innerText.includes("Submit UTR")) {
                 stopFilter();
                 return;
             }
 
+            // কাস্টমার সার্ভিস পপ-আপ রিমুভাল
             if (document.body.innerText.includes("contact customer service")) {
                 location.reload();
                 return;
             }
 
-            // এখন এটি অটো 'BANK' ট্যাবে ক্লিক করবে না।
-            // আপনি ম্যানুয়ালি যেই ট্যাবে ক্লিক করবেন (UPI/BANK/OTP-UPI), কোড সেখানেই লার্জ ফিল্টার করবে।
-            const currentActiveTab = document.querySelector('.van-tab--active');
-            if (currentActiveTab) {
-                currentActiveTab.click(); 
-            }
+            // আপনি যেই ট্যাবে থাকবেন (UPI/BANK), সেটাকেই রিফ্রেশ করবে
+            const currentTab = document.querySelector('.van-tab--active') || 
+                               Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
+            if (currentTab) currentTab.click();
 
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) largeTab.click();
                 
+                // ব্রাউজারের পরবর্তী ফ্রেমেই ফিল্টার রান করবে
                 requestAnimationFrame(filterAmount);
-            }, 150); 
+            }, 100); // গ্যাপ আরও কমানো হয়েছে
 
         }, 1000); 
     }
@@ -149,7 +128,7 @@
         if (!isAllowedUser || running) return;
         running = true;
         
-        statusText.textContent = 'Mode: Manual Tab Active';
+        statusText.textContent = 'Mode: Super Aggressive Active';
         statusDot.style.background = '#22c55e';
 
         filterAmount();
@@ -159,10 +138,7 @@
             filterAmount();
         });
 
-        observer.observe(document.body, { 
-            childList: true, 
-            subtree: true
-        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function stopFilter() {
@@ -177,11 +153,11 @@
 
     const panel = document.createElement('div');
     panel.className = PANEL_CLASS;
-    panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 220px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999; display: none;`;
+    panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 220px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 600; font-size: 14px;">
-            AR Wallet Ultra <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+            AR Wallet Pro <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 6px 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold;">
         <div style="display: flex; gap: 8px;">
@@ -198,6 +174,8 @@
     panel.querySelector('#sBtn').onclick = startFilter;
     panel.querySelector('#tBtn').onclick = stopFilter;
 
-    setInterval(updatePanelVisibility, 1000);
+    setInterval(() => {
+        const list = document.querySelector(`.${TARGET_CLASS}`);
+        panel.style.display = list ? 'block' : 'none';
+    }, 1000);
 })();
-        
