@@ -22,7 +22,7 @@
         }
     } catch (e) {}
 
-    // সাউন্ড সেটআপ
+    // সাউন্ড সেটআপ (আপনার দেওয়া লিঙ্কটি Raw ফরম্যাটে বসানো হয়েছে)
     const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
     sound.loop = false;
     sound.volume = 1;
@@ -30,6 +30,7 @@
     function playNotificationSound() {
         sound.currentTime = 0;
         sound.play().catch(() => {});
+        // সাউন্ডটি ৩ সেকেন্ড পর বন্ধ করার জন্য
         setTimeout(() => {
             sound.pause();
             sound.currentTime = 0;
@@ -52,95 +53,53 @@
         return amountInput.value.trim();
     }
 
-    function checkRetryCondition() {
-        const pageText = document.body.innerText;
-        if (pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken")) {
-            if (!refreshInterval && running) {
-                startRefresh(); 
-            }
-            return true;
-        }
-        return false;
-    }
-
     function filterAmount() {
-        const list = document.querySelector(`.${TARGET_CLASS}`);
-        if (!list || !running) return;
-
-        checkRetryCondition();
+        if (!isTargetAvailable()) return;
 
         const allowed = getAllowedAmount();
-        const orders = list.children;
+        const orders = document.querySelectorAll(`.${TARGET_CLASS} > *`);
 
-        for (let i = 0; i < orders.length; i++) {
-            const order = orders[i];
+        orders.forEach(order => {
+            if (order.closest(`.${PANEL_CLASS}`)) return;
+
             const text = order.innerText;
-            
             if (text && text.includes('₹')) {
                 const numbers = text.replace(/,/g, '').match(/\d+/g);
                 const orderAmount = numbers ? numbers[0] : null;
 
+                // নিখুঁত অ্যামাউন্ট চেক এবং সাউন্ড ট্রিগার
                 if (orderAmount === allowed) {
                     order.style.display = '';
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
-                    
                     if (buyBtn && running) {
-                        playNotificationSound();
+                        playNotificationSound(); // অর্ডার ধরলে সাউন্ড বাজবে
                         buyBtn.click();
-                        
-                        if (refreshInterval) clearInterval(refreshInterval);
-                        refreshInterval = null;
-
-                        setTimeout(() => {
-                            if (checkRetryCondition()) {
-                                if (running) startRefresh();
-                            } else {
-                                if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Copy Account")) {
-                                    stopFilter();
-                                } else {
-                                    if (running) startRefresh();
-                                }
-                            }
-                        }, 2500);
-                        return; 
+                        stopFilter();
                     }
                 } else {
                     order.style.display = 'none';
                 }
             }
-        }
+        });
     }
 
-    // ৩. রিফ্রেশ লজিক (ট্যাব সিলেকশন এখন ম্যানুয়াল)
+    // ৩. রিফ্রেশ লজিক (১ সেকেন্ড রেট)
     function startRefresh() {
-        if (refreshInterval) clearInterval(refreshInterval);
-        
         refreshInterval = setInterval(() => {
             if (!running) return;
-
-            if (document.body.innerText.includes("Submit UTR")) {
-                stopFilter();
-                return;
-            }
 
             if (document.body.innerText.includes("contact customer service")) {
                 location.reload();
                 return;
             }
 
-            // এখন এটি অটো 'BANK' ট্যাবে ক্লিক করবে না।
-            // আপনি ম্যানুয়ালি যেই ট্যাবে ক্লিক করবেন (UPI/BANK/OTP-UPI), কোড সেখানেই লার্জ ফিল্টার করবে।
-            const currentActiveTab = document.querySelector('.van-tab--active');
-            if (currentActiveTab) {
-                currentActiveTab.click(); 
-            }
+            const bankTab = Array.from(document.querySelectorAll('.van-tab, .van-tab__text')).find(el => el.innerText.includes('BANK'));
+            if (bankTab) bankTab.click();
 
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) largeTab.click();
-                
-                requestAnimationFrame(filterAmount);
-            }, 150); 
+            }, 250);
 
         }, 1000); 
     }
@@ -148,10 +107,6 @@
     function startFilter() {
         if (!isAllowedUser || running) return;
         running = true;
-        
-        statusText.textContent = 'Mode: Manual Tab Active';
-        statusDot.style.background = '#22c55e';
-
         filterAmount();
         startRefresh(); 
 
@@ -159,10 +114,9 @@
             filterAmount();
         });
 
-        observer.observe(document.body, { 
-            childList: true, 
-            subtree: true
-        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        statusText.textContent = 'Mode: 1s + Sound Active';
+        statusDot.style.background = '#22c55e';
     }
 
     function stopFilter() {
@@ -170,7 +124,6 @@
         running = false;
         if (observer) observer.disconnect();
         if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = null;
         statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
     }
@@ -181,7 +134,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 600; font-size: 14px;">
-            AR Wallet Ultra <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+            AR Wallet Safe <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 6px 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold;">
         <div style="display: flex; gap: 8px;">
@@ -200,4 +153,4 @@
 
     setInterval(updatePanelVisibility, 1000);
 })();
-                                                 
+    
