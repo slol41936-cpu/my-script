@@ -52,13 +52,11 @@
         return amountInput.value.trim();
     }
 
-    // নতুন লজিক: অর্ডার অন্য কেউ নিয়ে নিলে আবার রিফ্রেশ শুরু করা
     function checkRetryCondition() {
         const pageText = document.body.innerText;
-        // যদি অর্ডার কেউ নিয়ে নেয় বা ইরর দেখায়
         if (pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken")) {
             if (!refreshInterval && running) {
-                startRefresh(); // আবার রিফ্রেশ শুরু করবে
+                startRefresh(); 
             }
             return true;
         }
@@ -69,7 +67,6 @@
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
 
-        // যদি অন্য কেউ নিয়ে নেয় এমন মেসেজ থাকে, তাহলে থামা যাবে না
         checkRetryCondition();
 
         const allowed = getAllowedAmount();
@@ -91,18 +88,17 @@
                         playNotificationSound();
                         buyBtn.click();
                         
-                        // পেমেন্ট পেজে না যাওয়া পর্যন্ত রিফ্রেশ ইন্টারভাল সাময়িকভাবে থামবে
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // ২.৫ সেকেন্ড পর চেক করবে অর্ডার মিস হয়েছে কি না
                         setTimeout(() => {
                             if (checkRetryCondition()) {
-                                // অর্ডার মিস হয়েছে, রিফ্রেশ অটো শুরু হবে (উপরের checkRetryCondition থেকে)
+                                if (running) startRefresh();
                             } else {
-                                // যদি পেমেন্ট পেজ (UTR পেজ) চলে আসে, তবেই পুরোপুরি স্টপ হবে
                                 if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Copy Account")) {
                                     stopFilter();
+                                } else {
+                                    if (running) startRefresh();
                                 }
                             }
                         }, 2500);
@@ -115,13 +111,13 @@
         }
     }
 
+    // ৩. রিফ্রেশ লজিক (ট্যাব সিলেকশন এখন ম্যানুয়াল)
     function startRefresh() {
         if (refreshInterval) clearInterval(refreshInterval);
         
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // যদি অলরেডি পেমেন্ট পেজে চলে যান, তবে বন্ধ হবে
             if (document.body.innerText.includes("Submit UTR")) {
                 stopFilter();
                 return;
@@ -132,8 +128,12 @@
                 return;
             }
 
-            const bankTab = Array.from(document.querySelectorAll('.van-tab, .van-tab__text')).find(el => el.innerText.includes('BANK'));
-            if (bankTab) bankTab.click();
+            // এখন এটি অটো 'BANK' ট্যাবে ক্লিক করবে না।
+            // আপনি ম্যানুয়ালি যেই ট্যাবে ক্লিক করবেন (UPI/BANK/OTP-UPI), কোড সেখানেই লার্জ ফিল্টার করবে।
+            const currentActiveTab = document.querySelector('.van-tab--active');
+            if (currentActiveTab) {
+                currentActiveTab.click(); 
+            }
 
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
@@ -149,7 +149,7 @@
         if (!isAllowedUser || running) return;
         running = true;
         
-        statusText.textContent = 'Mode: Non-Stop Active';
+        statusText.textContent = 'Mode: Manual Tab Active';
         statusDot.style.background = '#22c55e';
 
         filterAmount();
@@ -200,3 +200,4 @@
 
     setInterval(updatePanelVisibility, 1000);
 })();
+                                                 
