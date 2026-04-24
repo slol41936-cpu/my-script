@@ -2,6 +2,7 @@
     let observer = null;
     let running = false;
     let refreshInterval = null;
+    let soundPlayedForThisOrder = false;
 
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
@@ -9,8 +10,7 @@
     // ১. আপনার আইডিগুলো
     const allowedMembers = [
         "21248739",
-        "22801760",
-        "23631188"
+        "22801760"
     ]; 
     
     let isAllowedUser = false;
@@ -28,12 +28,15 @@
     sound.volume = 1;
 
     function playNotificationSound() {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-        setTimeout(() => {
-            sound.pause();
+        if (!soundPlayedForThisOrder) {
             sound.currentTime = 0;
-        }, 3000);
+            sound.play().catch(() => {});
+            soundPlayedForThisOrder = true;
+            setTimeout(() => {
+                sound.pause();
+                sound.currentTime = 0;
+            }, 3000);
+        }
     }
 
     window.alert = function() { return true; };
@@ -45,9 +48,12 @@
 
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
-        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken");
+        const hasFailed = pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
+        if (hasFailed) soundPlayedForThisOrder = false;
+        return hasFailed;
     }
 
+    // ফিল্টার পাওয়ার বুস্ট করা হয়েছে
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
@@ -55,34 +61,34 @@
         const allowed = getAllowedAmount();
         const orders = list.children;
 
-        for (let i = 0; i < orders.length; i++) {
+        // দ্রুততম সার্চিং লুপ
+        for (let i = 0, len = orders.length; i < len; i++) {
             const order = orders[i];
             const text = order.innerText;
             
-            if (text && text.includes('₹')) {
+            if (text && text.indexOf('₹') !== -1) {
                 const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
 
                 if (orderAmount === allowed) {
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        playNotificationSound();
-                        buyBtn.click(); 
+                        buyBtn.click(); // সাথে সাথে ক্লিক
                         
-                        // রিফ্রেশ সাময়িক বন্ধ রাখা যতক্ষণ না রেজাল্ট আসছে
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
+                        // রেজাল্ট চেক করার টাইমিং আরও সূক্ষ্ম করা হয়েছে
                         setTimeout(() => {
                             if (checkFailure()) {
-                                // যদি অর্ডার মিস হয়, অটোমেটিক আবার রিফ্রেশ শুরু
                                 if (running) startRefresh(); 
-                            } else if (document.body.innerText.includes("Submit UTR")) {
-                                stopFilter(); // সাকসেস হলে স্টপ
+                            } else if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Transfer")) {
+                                playNotificationSound(); 
+                                stopFilter(); 
                             } else {
                                 if (running) startRefresh(); 
                             }
-                        }, 2500);
+                        }, 2200);
                         return; 
                     }
                 }
@@ -90,8 +96,8 @@
         }
     }
 
-    // অটোমেটিক রিফ্রেশ এবং ট্যাব সুইচিং লজিক
     function startRefresh() {
+        soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
         refreshInterval = setInterval(() => {
@@ -107,19 +113,23 @@
                 return;
             }
 
-            // ১. অটোমেটিক BANK বা একটিভ ট্যাব রিফ্রেশ
+            // একটিভ ট্যাব রিফ্রেশ
             const currentTab = document.querySelector('.van-tab--active') || 
                                Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
             if (currentTab) currentTab.click();
 
-            // ২. অটোমেটিক Default এবং Large উভয় জায়গায় চেক করার জন্য সুইচিং
+            // লার্জ এবং ডিফল্ট উভয় সেকশন দ্রুত স্ক্যান
             setTimeout(() => {
-                // প্রথমে ডিফল্ট চেক করবে, তারপর লার্জে ক্লিক করবে
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
-                if (largeTab) largeTab.click();
+                if (largeTab) {
+                    largeTab.click();
+                    // লার্জে ক্লিক করার সাথে সাথে একবার ফিল্টার
+                    filterAmount();
+                }
                 
+                // ব্রাউজারের পরবর্তী এভেলেবল মোমেন্টে ফিল্টার রান
                 requestAnimationFrame(filterAmount);
-            }, 150); 
+            }, 120); 
 
         }, 1000); 
     }
@@ -127,18 +137,25 @@
     function startFilter() {
         if (!isAllowedUser || running) return;
         running = true;
+        soundPlayedForThisOrder = false;
         
-        statusText.textContent = 'Mode: Full Auto (Def+Large)';
+        statusText.textContent = 'Mode: Ultra Scan Active';
         statusDot.style.background = '#22c55e';
 
         filterAmount();
         startRefresh(); 
 
+        // অবসার্ভারকে আরও সেনসিটিভ করা হয়েছে
         observer = new MutationObserver(() => {
-            filterAmount();
+            if (running) filterAmount();
         });
 
-        observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true,
+            attributes: false,
+            characterData: false
+        });
     }
 
     function stopFilter() {
@@ -157,7 +174,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 600; font-size: 14px;">
-            AR Wallet Auto <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+            AR Wallet Ultra <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 6px 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold;">
         <div style="display: flex; gap: 8px;">
@@ -179,4 +196,3 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
-             
