@@ -129,6 +129,7 @@
     }
 
     function startFilter() {
+        // যদি ইউজার লিস্টে না থাকে তবে স্টার্ট হবে না
         if (!isAllowedUser || running) return;
         running = true;
         soundPlayedForThisOrder = false;
@@ -162,16 +163,19 @@
     panel.className = PANEL_CLASS;
     panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
 
-    // প্যানেল ডিজাইন: শুধু AR Wallet টাইটেল রাখা হয়েছে
+    // প্যানেল ডিজাইন: স্ট্যাটাস টেক্সট অ্যাড করা হয়েছে
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
-        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
-        <div style="display: flex; gap: 10px;">
-            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
+        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <button id="sBtn" style="flex: 1; background: ${isAllowedUser ? '#22c55e' : '#9ca3af'}; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: ${isAllowedUser ? 'pointer' : 'not-allowed'}; font-weight: bold;">Start</button>
             <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
+        </div>
+        <div id="authStatus" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">
+            ${isAllowedUser ? 'Active' : 'Access Denied'}
         </div>
     `;
 
