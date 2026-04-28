@@ -55,7 +55,6 @@
         return hasFailed;
     }
 
-    // ফিল্টার পাওয়ার বুস্ট করা হয়েছে
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
@@ -63,7 +62,6 @@
         const allowed = getAllowedAmount();
         const orders = list.children;
 
-        // দ্রুততম সার্চিং লুপ
         for (let i = 0, len = orders.length; i < len; i++) {
             const order = orders[i];
             const text = order.innerText;
@@ -75,17 +73,16 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); // সাথে সাথে ক্লিক
+                        playNotificationSound(); 
+                        buyBtn.click(); 
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // রেজাল্ট চেক করার টাইমিং আরও সূক্ষ্ম করা হয়েছে
                         setTimeout(() => {
                             if (checkFailure()) {
                                 if (running) startRefresh(); 
-                            } else if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Transfer")) {
-                                playNotificationSound(); 
+                            } else if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Transfer") || document.body.innerText.includes("Choose UPI")) {
                                 stopFilter(); 
                             } else {
                                 if (running) startRefresh(); 
@@ -105,7 +102,7 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            if (document.body.innerText.includes("Submit UTR")) {
+            if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Choose UPI")) {
                 stopFilter();
                 return;
             }
@@ -115,21 +112,16 @@
                 return;
             }
 
-            // একটিভ ট্যাব রিফ্রেশ
             const currentTab = document.querySelector('.van-tab--active') || 
                                Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
             if (currentTab) currentTab.click();
 
-            // লার্জ এবং ডিফল্ট উভয় সেকশন দ্রুত স্ক্যান
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) {
                     largeTab.click();
-                    // লার্জে ক্লিক করার সাথে সাথে একবার ফিল্টার
                     filterAmount();
                 }
-                
-                // ব্রাউজারের পরবর্তী এভেলেবল মোমেন্টে ফিল্টার রান
                 requestAnimationFrame(filterAmount);
             }, 120); 
 
@@ -140,14 +132,11 @@
         if (!isAllowedUser || running) return;
         running = true;
         soundPlayedForThisOrder = false;
-        
-        statusText.textContent = 'Mode: Ultra Scan Active';
         statusDot.style.background = '#22c55e';
 
         filterAmount();
         startRefresh(); 
 
-        // অবসার্ভারকে আরও সেনসিটিভ করা হয়েছে
         observer = new MutationObserver(() => {
             if (running) filterAmount();
         });
@@ -166,30 +155,29 @@
         if (observer) observer.disconnect();
         if (refreshInterval) clearInterval(refreshInterval);
         refreshInterval = null;
-        statusText.textContent = 'Stopped';
         statusDot.style.background = '#ef4444';
     }
 
     const panel = document.createElement('div');
     panel.className = PANEL_CLASS;
-    panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 220px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
+    panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
 
+    // প্যানেল ডিজাইন: শুধু AR Wallet টাইটেল রাখা হয়েছে
     panel.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 600; font-size: 14px;">
-            AR Wallet Ultra <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
-        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 6px 8px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold;">
-        <div style="display: flex; gap: 8px;">
-            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 8px 0; font-size: 13px; cursor: pointer; font-weight: bold;">Start</button>
-            <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 8px 0; font-size: 13px; cursor: pointer; font-weight: bold;">Stop</button>
+        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
+        <div style="display: flex; gap: 10px;">
+            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
+            <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
         </div>
-        <div id="sTxt" style="margin-top: 10px; font-size: 12px; text-align: center; color: #6b7280;">Ready</div>
     `;
 
     document.body.appendChild(panel);
     const amountInput = panel.querySelector('#amtInp');
     const statusDot = panel.querySelector('#sDot');
-    const statusText = panel.querySelector('#sTxt');
     panel.querySelector('#sBtn').onclick = startFilter;
     panel.querySelector('#tBtn').onclick = stopFilter;
 
