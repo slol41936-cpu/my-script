@@ -7,7 +7,6 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
-    // ১. আপনার আইডিগুলো
     const allowedMembers = [
         "21248739",
         "22801760",
@@ -39,7 +38,7 @@
             setTimeout(() => {
                 sound.pause();
                 sound.currentTime = 0;
-            }, 3000);
+            }, 4000); // মিউজিক একটু বেশিক্ষণ বাজবে যাতে বুঝতে সুবিধা হয়
         }
     }
 
@@ -50,11 +49,19 @@
         return amountInput.value.trim();
     }
 
+    // অর্ডার ফেল হয়েছে কি না চেক
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
-        const hasFailed = pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
-        if (hasFailed) soundPlayedForThisOrder = false;
-        return hasFailed;
+        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
+    }
+
+    // পেমেন্ট পেজ এসেছে কি না চেক (সাউন্ড বাজার আসল জায়গা)
+    function isPaymentPagePresent() {
+        const pageText = document.body.innerText;
+        return pageText.includes("Select Method Payment") || 
+               pageText.includes("Please select payment account") || 
+               pageText.includes("Choose UPI") || 
+               pageText.includes("Submit UTR");
     }
 
     function filterAmount() {
@@ -75,20 +82,19 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        // সাউন্ড লজিক এখান থেকে সরিয়ে চেক ফাংশনে নেওয়া হয়েছে
-                        buyBtn.click(); 
+                        buyBtn.click(); // শুধু ক্লিক করবে
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
+                        // ২.২ সেকেন্ড পর চেক করবে পেমেন্ট পেজ আসলো কি না
                         setTimeout(() => {
-                            const currentText = document.body.innerText;
-                            if (checkFailure()) {
-                                if (running) startRefresh(); 
-                            } else if (currentText.includes("Submit UTR") || currentText.includes("Transfer") || currentText.includes("Choose UPI")) {
-                                // অর্ডার কনফার্ম হলেই কেবল মিউজিক বাজবে
-                                playNotificationSound(); 
+                            if (isPaymentPagePresent()) {
+                                playNotificationSound(); // পেমেন্ট পেজ পেলেই মিউজিক বাজবে
                                 stopFilter(); 
+                            } else if (checkFailure()) {
+                                soundPlayedForThisOrder = false;
+                                if (running) startRefresh(); 
                             } else {
                                 if (running) startRefresh(); 
                             }
@@ -107,14 +113,13 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            const currentText = document.body.innerText;
-            if (currentText.includes("Submit UTR") || currentText.includes("Choose UPI")) {
-                playNotificationSound(); // রিফ্রেশ এর মাঝখানে ধরা পড়লেও মিউজিক বাজবে
+            if (isPaymentPagePresent()) {
+                playNotificationSound();
                 stopFilter();
                 return;
             }
 
-            if (currentText.includes("contact customer service")) {
+            if (document.body.innerText.includes("contact customer service")) {
                 location.reload();
                 return;
             }
@@ -132,7 +137,7 @@
                 requestAnimationFrame(filterAmount);
             }, 120); 
 
-        }, 1000); 
+        }, 1200); 
     }
 
     function startFilter() {
@@ -140,20 +145,21 @@
         running = true;
         soundPlayedForThisOrder = false;
         statusDot.style.background = '#22c55e';
-
         filterAmount();
         startRefresh(); 
 
         observer = new MutationObserver(() => {
-            if (running) filterAmount();
+            if (running) {
+                if (isPaymentPagePresent()) {
+                    playNotificationSound();
+                    stopFilter();
+                } else {
+                    filterAmount();
+                }
+            }
         });
 
-        observer.observe(document.body, { 
-            childList: true, 
-            subtree: true,
-            attributes: false,
-            characterData: false
-        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function stopFilter() {
@@ -195,4 +201,3 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
-                
