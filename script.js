@@ -75,16 +75,19 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        playNotificationSound(); 
+                        // সাউন্ড লজিক এখান থেকে সরিয়ে চেক ফাংশনে নেওয়া হয়েছে
                         buyBtn.click(); 
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
                         setTimeout(() => {
+                            const currentText = document.body.innerText;
                             if (checkFailure()) {
                                 if (running) startRefresh(); 
-                            } else if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Transfer") || document.body.innerText.includes("Choose UPI")) {
+                            } else if (currentText.includes("Submit UTR") || currentText.includes("Transfer") || currentText.includes("Choose UPI")) {
+                                // অর্ডার কনফার্ম হলেই কেবল মিউজিক বাজবে
+                                playNotificationSound(); 
                                 stopFilter(); 
                             } else {
                                 if (running) startRefresh(); 
@@ -104,12 +107,14 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            if (document.body.innerText.includes("Submit UTR") || document.body.innerText.includes("Choose UPI")) {
+            const currentText = document.body.innerText;
+            if (currentText.includes("Submit UTR") || currentText.includes("Choose UPI")) {
+                playNotificationSound(); // রিফ্রেশ এর মাঝখানে ধরা পড়লেও মিউজিক বাজবে
                 stopFilter();
                 return;
             }
 
-            if (document.body.innerText.includes("contact customer service")) {
+            if (currentText.includes("contact customer service")) {
                 location.reload();
                 return;
             }
@@ -131,7 +136,6 @@
     }
 
     function startFilter() {
-        // যদি ইউজার লিস্টে না থাকে তবে স্টার্ট হবে না
         if (!isAllowedUser || running) return;
         running = true;
         soundPlayedForThisOrder = false;
@@ -165,7 +169,6 @@
     panel.className = PANEL_CLASS;
     panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
 
-    // প্যানেল ডিজাইন: স্ট্যাটাস টেক্সট অ্যাড করা হয়েছে
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
             <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
@@ -192,3 +195,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+                
