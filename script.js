@@ -31,7 +31,6 @@
     sound.loop = false;
     sound.volume = 1;
 
-    // মিউজিক একদম সঙ্গে সঙ্গে বাজার জন্য ফাংশন
     function playNotificationSound() {
         if (!soundPlayedForThisOrder) {
             sound.currentTime = 0;
@@ -40,7 +39,7 @@
             setTimeout(() => {
                 sound.pause();
                 sound.currentTime = 0;
-            }, 4000);
+            }, 4000); // মিউজিক একটু বেশিক্ষণ বাজবে যাতে বুঝতে সুবিধা হয়
         }
     }
 
@@ -51,26 +50,19 @@
         return amountInput.value.trim();
     }
 
+    // অর্ডার ফেল হয়েছে কি না চেক
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
         return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
     }
 
-    // পেমেন্ট পেজে প্রথম অপশনটিতে ক্লিক করার লজিক
-    function handlePaymentPage() {
-        if (document.body.innerText.includes("Select Method Payment")) {
-            // নম্বর যাই হোক, একদম উপরের পেমেন্ট কার্ডটি খুঁজে ক্লিক করবে
-            const firstOption = document.querySelector('.van-cell, .payment-item, [class*="item"]'); 
-            if (firstOption) {
-                firstOption.click();
-            }
-        }
-    }
-
-    // অর্ডার কনফার্ম হয়েছে কি না চেক করার ফাইনাল কন্ডিশন
-    function isOrderConfirmed() {
+    // পেমেন্ট পেজ এসেছে কি না চেক (সাউন্ড বাজার আসল জায়গা)
+    function isPaymentPagePresent() {
         const pageText = document.body.innerText;
-        return pageText.includes("Submit UTR") || pageText.includes("Transfer") || pageText.includes("Countdown to Expiry");
+        return pageText.includes("Select Method Payment") || 
+               pageText.includes("Please select payment account") || 
+               pageText.includes("Choose UPI") || 
+               pageText.includes("Submit UTR");
     }
 
     function filterAmount() {
@@ -91,27 +83,23 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); 
+                        buyBtn.click(); // শুধু ক্লিক করবে
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // সুপার ফাস্ট চ্যাকিং লজিক
-                        const fastCheck = setInterval(() => {
-                            handlePaymentPage(); // পেমেন্ট পেজ এলে সাথে সাথে প্রথম অপশনে ক্লিক
-                            
-                            if (isOrderConfirmed()) { // অর্ডার কনফার্ম হওয়া মাত্র মিউজিক
-                                playNotificationSound(); 
-                                clearInterval(fastCheck);
-                                stopFilter();
+                        // ২.২ সেকেন্ড পর চেক করবে পেমেন্ট পেজ আসলো কি না
+                        setTimeout(() => {
+                            if (isPaymentPagePresent()) {
+                                playNotificationSound(); // পেমেন্ট পেজ পেলেই মিউজিক বাজবে
+                                stopFilter(); 
                             } else if (checkFailure()) {
-                                clearInterval(fastCheck);
                                 soundPlayedForThisOrder = false;
-                                if (running) startRefresh();
+                                if (running) startRefresh(); 
+                            } else {
+                                if (running) startRefresh(); 
                             }
-                        }, 100); // ১০০ মিলিসেকেন্ড পর পর চেক করবে যাতে কোনো দেরি না হয়
-
-                        setTimeout(() => clearInterval(fastCheck), 15000);
+                        }, 2200);
                         return; 
                     }
                 }
@@ -126,9 +114,7 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            handlePaymentPage();
-
-            if (isOrderConfirmed()) {
+            if (isPaymentPagePresent()) {
                 playNotificationSound();
                 stopFilter();
                 return;
@@ -149,6 +135,7 @@
                     largeTab.click();
                     filterAmount();
                 }
+                requestAnimationFrame(filterAmount);
             }, 120); 
 
         }, 1200); 
@@ -164,8 +151,7 @@
 
         observer = new MutationObserver(() => {
             if (running) {
-                handlePaymentPage();
-                if (isOrderConfirmed()) {
+                if (isPaymentPagePresent()) {
                     playNotificationSound();
                     stopFilter();
                 } else {
