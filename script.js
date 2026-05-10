@@ -57,7 +57,7 @@
                pageText.includes("Submit UTR");
     }
 
-    // আপনার বন্ধুর কোডের মতো "টেনে আনা" বা ফাস্ট ফিল্টার লজিক
+    // অর্ডার খোঁজার শক্তি বাড়ানো হয়েছে (একদম নিখুঁত ফিল্টার)
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
@@ -76,11 +76,12 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); 
+                        buyBtn.click(); // ইনস্ট্যান্ট ক্লিক
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
+                        // অর্ডার কনফার্ম চেক ২.২ সেকেন্ড থেকে কমিয়ে ১.৫ করা হয়েছে
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound(); 
@@ -89,7 +90,7 @@
                                 soundPlayedForThisOrder = false;
                                 startRefresh(); 
                             }
-                        }, 1800);
+                        }, 1500);
                         return true; 
                     }
                 }
@@ -102,6 +103,7 @@
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
+        // রিফ্রেশ টাইমিং ১২০০ms থেকে কমিয়ে ৪৫০ms করা হয়েছে (সুপার ফাস্ট)
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -116,29 +118,27 @@
                 return;
             }
 
-            // ১. আপনার কথা মতো ব্যাঙ্ক অপশনে ক্লিক বন্ধ করা হয়েছে।
-            
-            // ২. লার্জ এবং ডিফল্ট এর মধ্যে ফাস্ট সুইচিং
+            // লার্জ এবং ডিফল্ট এর মধ্যে যাতায়াত আরও ফাস্ট করা হয়েছে
             const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-            // যদি ১০০০ না পায় তবেই ট্যাব সুইচ করবে, যাতে বড় অর্ডার না আসে
             const found = filterAmount();
             
             if (!found) {
-                // খুব দ্রুত লার্জ থেকে ডিফল্টে আসা যাওয়া করবে
                 if (defaultTab) {
                     defaultTab.click();
                     setTimeout(() => {
                         if (largeTab) largeTab.click();
-                    }, 40); // গ্যাপ কমিয়ে দেওয়া হয়েছে
+                        // ক্লিক করার সাথে সাথেই ফিল্টার পাওয়ার বাড়ানো হয়েছে
+                        requestAnimationFrame(filterAmount);
+                    }, 30); // গ্যাপ কমিয়ে মাত্র ৩০ মিলিসেকেন্ড করা হয়েছে
                 }
             }
 
             requestAnimationFrame(filterAmount);
 
-        }, 550); // রিফ্রেশ টাইমিং আরও ফাস্ট করা হয়েছে
+        }, 450); 
     }
 
     function startFilter() {
@@ -149,6 +149,7 @@
         filterAmount();
         startRefresh(); 
 
+        // ব্যাকগ্রাউন্ড অবজারভারের শক্তি বাড়ানো হয়েছে
         observer = new MutationObserver(() => {
             if (running) {
                 if (isPaymentPagePresent()) {
@@ -178,12 +179,12 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet PRO</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
+            <button id="sBtn" style="flex: 1; background: ${isAllowedUser ? '#22c55e' : '#9ca3af'}; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
             <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
         </div>
         <div id="authStatus" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">
