@@ -46,18 +46,23 @@
 
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
-        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
+        // মিস হওয়ার সব ধরণের মেসেজ চেক করবে
+        return pageText.includes("someone else") || 
+               pageText.includes("bought by") || 
+               pageText.includes("already taken") || 
+               pageText.includes("failed") ||
+               pageText.includes("order was bought");
     }
 
     function isPaymentPagePresent() {
         const pageText = document.body.innerText;
+        // পেমেন্ট পেজ আসলে স্টপ হবে
         return pageText.includes("Select Method Payment") || 
                pageText.includes("Please select payment account") || 
                pageText.includes("Choose UPI") || 
                pageText.includes("Submit UTR");
     }
 
-    // অর্ডার ফিল্টার এবং হাইড করার মেইন শক্তি
     function filterAndHideOrders() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
@@ -73,28 +78,32 @@
                 const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
 
                 if (orderAmount === allowed) {
-                    // শুধু হাজার টাকার অর্ডারটি দেখাবে
                     order.style.display = "block";
-                    
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
+                    
                     if (buyBtn && running) {
                         buyBtn.click(); 
+                        
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
+                        // অর্ডার মিস হলে ১ সেকেন্ডের মধ্যে অটো-রিস্টার্ট হবে
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound(); 
                                 stopFilter(); 
-                            } else if (checkFailure() || running) {
+                            } else if (checkFailure()) {
+                                // অর্ডার মিস হয়েছে, তাই নিজে থেকেই আবার খোঁজা শুরু করবে
                                 soundPlayedForThisOrder = false;
                                 startRefresh(); 
+                            } else {
+                                // অন্য যেকোনো কারণে আটকে গেলে আবার শুরু করবে
+                                if (running) startRefresh();
                             }
-                        }, 1500);
-                        return true;
+                        }, 1000); 
+                        return true; 
                     }
                 } else {
-                    // ১০০০ ছাড়া অন্য সব অর্ডার হাইড করে দেবে
                     order.style.display = "none";
                 }
             }
@@ -109,15 +118,17 @@
         refreshInterval = setInterval(() => {
             if (!running) return;
 
+            // পেমেন্ট পেজ বা মিস হওয়া মেসেজ রিয়েল টাইমে চেক করবে
             if (isPaymentPagePresent()) {
                 playNotificationSound();
                 stopFilter();
                 return;
             }
 
-            if (document.body.innerText.includes("contact customer service")) {
-                location.reload();
-                return;
+            if (checkFailure()) {
+                // পপ-আপ মেসেজ থাকলে লিস্ট রিফ্রেশ করার চেষ্টা করবে
+                const refreshBtn = document.querySelector('.van-button--default');
+                if (refreshBtn) refreshBtn.click();
             }
 
             const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
@@ -136,6 +147,7 @@
                 }
             }
             requestAnimationFrame(filterAndHideOrders);
+
         }, 450); 
     }
 
@@ -152,11 +164,15 @@
                 if (isPaymentPagePresent()) {
                     playNotificationSound();
                     stopFilter();
+                } else if (checkFailure()) {
+                    // স্ক্রিনে কোনো এরর বা মিস মেসেজ আসলে অটোমেটিক রিস্টার্ট
+                    if (!refreshInterval) startRefresh();
                 } else {
                     filterAndHideOrders();
                 }
             }
         });
+
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
@@ -168,7 +184,6 @@
         refreshInterval = null;
         statusDot.style.background = '#ef4444';
         
-        // স্টপ করলে সব অর্ডার আবার আগের মতো দেখাবে
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (list) {
             Array.from(list.children).forEach(order => order.style.display = "block");
@@ -181,7 +196,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet PRO</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet PRO v2</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
