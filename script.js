@@ -57,9 +57,10 @@
                pageText.includes("Submit UTR");
     }
 
+    // আপনার বন্ধুর কোডের মতো "টেনে আনা" বা ফাস্ট ফিল্টার লজিক
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
-        if (!list || !running) return;
+        if (!list || !running) return false;
 
         const allowed = getAllowedAmount();
         const orders = list.children;
@@ -84,25 +85,23 @@
                             if (isPaymentPagePresent()) {
                                 playNotificationSound(); 
                                 stopFilter(); 
-                            } else if (checkFailure()) {
+                            } else if (checkFailure() || running) {
                                 soundPlayedForThisOrder = false;
-                                if (running) startRefresh(); 
-                            } else {
-                                if (running) startRefresh(); 
+                                startRefresh(); 
                             }
-                        }, 2200);
-                        return; 
+                        }, 1800);
+                        return true; 
                     }
                 }
             }
         }
+        return false;
     }
 
     function startRefresh() {
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
-        // রিফ্রেশ ইন্টারভাল ১০০০/১২০০ থেকে কমিয়ে ৬০০ করা হয়েছে (ফাস্ট কাজ করার জন্য)
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -117,25 +116,29 @@
                 return;
             }
 
-            // ১. ব্যাংক অপশনে রিফ্রেশ (ক্লিক) বন্ধ করে দেওয়া হয়েছে আপনার কথামতো
-
-            // ২. লার্জ এবং ডিফল্ট এর গ্যাপ কমিয়ে ফটাফট কাজ করার লজিক
-            const tabs = Array.from(document.querySelectorAll('div, span, p'));
+            // ১. আপনার কথা মতো ব্যাঙ্ক অপশনে ক্লিক বন্ধ করা হয়েছে।
+            
+            // ২. লার্জ এবং ডিফল্ট এর মধ্যে ফাস্ট সুইচিং
+            const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-            // যদি ডিফল্ট ট্যাবে থাকে তবে লার্জে ক্লিক করবে, লার্জে থাকলে ফিল্টার করবে
-            if (defaultTab) {
-                defaultTab.click();
-                setTimeout(() => {
-                    if (largeTab) largeTab.click();
-                    filterAmount();
-                }, 50); // মাত্র ৫০ মিলিসেকেন্ড গ্যাপ (একদম ফাস্ট)
-            }
+            // যদি ১০০০ না পায় তবেই ট্যাব সুইচ করবে, যাতে বড় অর্ডার না আসে
+            const found = filterAmount();
             
+            if (!found) {
+                // খুব দ্রুত লার্জ থেকে ডিফল্টে আসা যাওয়া করবে
+                if (defaultTab) {
+                    defaultTab.click();
+                    setTimeout(() => {
+                        if (largeTab) largeTab.click();
+                    }, 40); // গ্যাপ কমিয়ে দেওয়া হয়েছে
+                }
+            }
+
             requestAnimationFrame(filterAmount);
 
-        }, 600); 
+        }, 550); // রিফ্রেশ টাইমিং আরও ফাস্ট করা হয়েছে
     }
 
     function startFilter() {
@@ -180,7 +183,7 @@
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="sBtn" style="flex: 1; background: ${isAllowedUser ? '#22c55e' : '#9ca3af'}; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: ${isAllowedUser ? 'pointer' : 'not-allowed'}; font-weight: bold;">Start</button>
+            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
             <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
         </div>
         <div id="authStatus" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">
