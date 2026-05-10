@@ -36,8 +36,16 @@
         }
     }
 
-    window.alert = function() { return true; };
-    window.confirm = function() { return true; };
+    // অটোমেটিক পপ-আপ বা মেসেজ বক্স ক্লোজ করার ফাংশন
+    function closePopups() {
+        // 'Confirm' বা 'OK' বা 'Close' জাতীয় সব বাটন খুঁজে ক্লিক করবে
+        const buttons = document.querySelectorAll('.van-button--default, .van-dialog__confirm, .van-popup__close-icon');
+        buttons.forEach(btn => {
+            if (btn.offsetParent !== null) { // বাটনটি স্ক্রিনে দেখা গেলে
+                btn.click();
+            }
+        });
+    }
 
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
@@ -65,23 +73,24 @@
                     order.style.display = "block";
                     foundTarget = true;
                     const btn = order.querySelector('button') || order.querySelector('.van-button');
-                    if (btn && running) {
+                    
+                    // পপ-আপ থাকলে ক্লিক করবে না, আগে পপ-আপ সরাবে
+                    if (btn && running && !checkFailure()) {
                         btn.click();
-                        // ক্লিক করার সাথে সাথে ইন্টারভাল ক্লিয়ার করে দ্রুত চেক করবে
+                        
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
                         
-                        // ১ সেকেন্ডের মধ্যে রেজাল্ট চেক (সাফল্য না কি ব্যর্থতা)
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound();
                                 stopFilter();
                             } else {
-                                // যদি পেমেন্ট পেজ না আসে, তবে এরর মেসেজ থাক বা না থাক—রিস্টার্ট করবে
+                                closePopups(); // মিস হলে পপ-আপ বন্ধ করবে
                                 soundPlayedForThisOrder = false;
                                 startRefresh();
                             }
-                        }, 1000);
+                        }, 800); // চেক করার সময় ১ সেকেন্ড থেকে কমিয়ে ৮০০ms করা হয়েছে
                     }
                 } else {
                     order.style.display = "none";
@@ -102,10 +111,9 @@
                 return;
             }
 
-            // কোনো পপ-আপ বা এরর থাকলে তা সরানোর চেষ্টা করবে
+            // যদি কোনো এরর মেসেজ থাকে, তবে সেটি ক্লোজ করে রিফ্রেশ করবে
             if (checkFailure()) {
-                const closeBtn = document.querySelector('.van-dialog__confirm, .van-button--default');
-                if (closeBtn) closeBtn.click();
+                closePopups();
             }
 
             const tabs = Array.from(document.querySelectorAll('.van-tab, span, div'));
@@ -117,10 +125,10 @@
                     defTab.click();
                     setTimeout(() => {
                         if (largeTab) largeTab.click();
-                    }, 30);
+                    }, 20); // আরও ফাস্ট সুইচিং
                 }
             }
-        }, 450);
+        }, 400); // রিফ্রেশ স্পিড ৪৫০ থেকে কমিয়ে ৪০০ করা হয়েছে
     }
 
     function startFilter() {
