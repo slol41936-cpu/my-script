@@ -57,8 +57,8 @@
                pageText.includes("Submit UTR");
     }
 
-    // অর্ডার খোঁজার শক্তি বাড়ানো হয়েছে (একদম নিখুঁত ফিল্টার)
-    function filterAmount() {
+    // অর্ডার ফিল্টার এবং হাইড করার মেইন শক্তি
+    function filterAndHideOrders() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
 
@@ -73,15 +73,15 @@
                 const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
 
                 if (orderAmount === allowed) {
-                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
+                    // শুধু হাজার টাকার অর্ডারটি দেখাবে
+                    order.style.display = "block";
                     
+                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     if (buyBtn && running) {
-                        buyBtn.click(); // ইনস্ট্যান্ট ক্লিক
-                        
+                        buyBtn.click(); 
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // অর্ডার কনফার্ম চেক ২.২ সেকেন্ড থেকে কমিয়ে ১.৫ করা হয়েছে
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound(); 
@@ -91,8 +91,11 @@
                                 startRefresh(); 
                             }
                         }, 1500);
-                        return true; 
+                        return true;
                     }
+                } else {
+                    // ১০০০ ছাড়া অন্য সব অর্ডার হাইড করে দেবে
+                    order.style.display = "none";
                 }
             }
         }
@@ -103,7 +106,6 @@
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
-        // রিফ্রেশ টাইমিং ১২০০ms থেকে কমিয়ে ৪৫০ms করা হয়েছে (সুপার ফাস্ট)
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -118,26 +120,22 @@
                 return;
             }
 
-            // লার্জ এবং ডিফল্ট এর মধ্যে যাতায়াত আরও ফাস্ট করা হয়েছে
             const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-            const found = filterAmount();
+            const found = filterAndHideOrders();
             
             if (!found) {
                 if (defaultTab) {
                     defaultTab.click();
                     setTimeout(() => {
                         if (largeTab) largeTab.click();
-                        // ক্লিক করার সাথে সাথেই ফিল্টার পাওয়ার বাড়ানো হয়েছে
-                        requestAnimationFrame(filterAmount);
-                    }, 30); // গ্যাপ কমিয়ে মাত্র ৩০ মিলিসেকেন্ড করা হয়েছে
+                        requestAnimationFrame(filterAndHideOrders);
+                    }, 30); 
                 }
             }
-
-            requestAnimationFrame(filterAmount);
-
+            requestAnimationFrame(filterAndHideOrders);
         }, 450); 
     }
 
@@ -146,21 +144,19 @@
         running = true;
         soundPlayedForThisOrder = false;
         statusDot.style.background = '#22c55e';
-        filterAmount();
+        filterAndHideOrders();
         startRefresh(); 
 
-        // ব্যাকগ্রাউন্ড অবজারভারের শক্তি বাড়ানো হয়েছে
         observer = new MutationObserver(() => {
             if (running) {
                 if (isPaymentPagePresent()) {
                     playNotificationSound();
                     stopFilter();
                 } else {
-                    filterAmount();
+                    filterAndHideOrders();
                 }
             }
         });
-
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
@@ -171,6 +167,12 @@
         if (refreshInterval) clearInterval(refreshInterval);
         refreshInterval = null;
         statusDot.style.background = '#ef4444';
+        
+        // স্টপ করলে সব অর্ডার আবার আগের মতো দেখাবে
+        const list = document.querySelector(`.${TARGET_CLASS}`);
+        if (list) {
+            Array.from(list.children).forEach(order => order.style.display = "block");
+        }
     }
 
     const panel = document.createElement('div');
