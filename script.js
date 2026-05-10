@@ -7,18 +7,14 @@
     const PANEL_CLASS = 'amount-filter-panel';
     const TARGET_CLASS = 'x-buyList-list';
 
-    const allowedMembers = [
-        "21248739", "22801760", "24541398", "23631188", 
-        "26019413", "21114464", "29021111", "29780075",
-    ]; 
-    
+    // ১. অনুমতি প্রাপ্ত আইডিগুলো
+    const allowedMembers = ["21248739", "22801760", "24541398", "23631188", "26019413", "21114464", "29021111", "29780075"]; 
     let isAllowedUser = false;
+
     try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
         const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
-        if (memberId && allowedMembers.includes(String(memberId))) {
-            isAllowedUser = true;
-        }
+        if (memberId && allowedMembers.includes(String(memberId))) isAllowedUser = true;
     } catch (e) {}
 
     const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
@@ -34,42 +30,36 @@
         }
     }
 
-    function isPaymentPagePresent() {
-        const pageText = document.body.innerText;
-        return pageText.includes("Select Method Payment") || 
-               pageText.includes("Choose UPI") || 
-               pageText.includes("Submit UTR");
+    // ২. অর্ডার কনফার্ম হয়েছে কি না চেক করার ফাংশন
+    function isConfirmed() {
+        const text = document.body.innerText;
+        return text.includes("Submit UTR") || text.includes("Transfer") || text.includes("Please select payment account");
     }
 
-    // ১০০০ টাকার অর্ডার ধরা মাত্রই ক্লিক করার ফাংশন
+    // ৩. পেমেন্ট পেজে প্রথম অপশনে ক্লিক করা
+    function clickFirstPaymentOption() {
+        if (document.body.innerText.includes("Select Method Payment")) {
+            const options = document.querySelectorAll('.van-cell, [class*="item"]');
+            if (options.length > 0) options[0].click();
+        }
+    }
+
+    // ৪. অর্ডার ধরার আসল লজিক
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
-        if (!list || !running) return;
+        if (!list || !running) return false;
 
         const allowed = amountInput.value.trim();
         const orders = list.children;
 
         for (let i = 0; i < orders.length; i++) {
             const order = orders[i];
-            const text = order.innerText;
-            
-            if (text && text.includes('₹')) {
-                const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
-
+            if (order.innerText.includes('₹')) {
+                const orderAmount = order.innerText.replace(/,/g, '').match(/\d+/g)?.[0];
                 if (orderAmount === allowed) {
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     if (buyBtn) {
-                        buyBtn.click(); // সবথেকে দ্রুত ক্লিক
-                        if (refreshInterval) clearInterval(refreshInterval);
-                        
-                        setTimeout(() => {
-                            if (isPaymentPagePresent()) {
-                                playNotificationSound();
-                                stopFilter(); 
-                            } else if (running) {
-                                startRefresh(); 
-                            }
-                        }, 1500);
+                        buyBtn.click(); // ফাস্ট ক্লিক
                         return true; 
                     }
                 }
@@ -78,31 +68,38 @@
         return false;
     }
 
+    // ৫. ট্যাব পরিবর্তন এবং রিফ্রেশ লজিক (সবচেয়ে গুরুত্বপূর্ণ)
     function startRefresh() {
         if (refreshInterval) clearInterval(refreshInterval);
         
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            // "Default" এবং "Large" এর মধ্যে অটো সুইচ করে ১০০০ খোঁজা
-            const tabs = Array.from(document.querySelectorAll('.van-tab__text, div, span'));
-            const defaultTab = tabs.find(el => el.innerText === 'Default');
-            const largeTab = tabs.find(el => el.innerText === 'Large');
-
-            // প্রথমে বর্তমানে যে পেজে আছে সেখানে খোঁজো
-            if (filterAmount()) return;
-
-            // যদি না পায়, তবে অন্য ট্যাবে গিয়ে খোঁজো
-            const activeTab = document.querySelector('.van-tab--active');
-            if (activeTab && activeTab.innerText.includes('Large') && defaultTab) {
-                defaultTab.click();
-            } else if (largeTab) {
-                largeTab.click();
+            // যদি পেমেন্ট পেজে থাকে
+            clickFirstPaymentOption();
+            if (isConfirmed()) {
+                playNotificationSound();
+                stopFilter();
+                return;
             }
 
-            setTimeout(filterAmount, 100); // ট্যাব পরিবর্তনের সাথে সাথে স্ক্যান
+            // বর্তমানে যা আছে স্ক্যান করো
+            if (filterAmount()) return;
 
-        }, 800); // রিফ্রেশ স্পিড বাড়ানো হয়েছে
+            // ট্যাব সুইচ করার লজিক (Default এবং Large এর মধ্যে)
+            const allElements = Array.from(document.querySelectorAll('div, span, p'));
+            const defaultTab = allElements.find(el => el.innerText === 'Default');
+            const largeTab = allElements.find(el => el.innerText === 'Large');
+
+            const activeTab = document.querySelector('.van-tab--active') || document.querySelector('[class*="active"]');
+            
+            if (activeTab && activeTab.innerText.includes("Large")) {
+                if (defaultTab) defaultTab.click();
+            } else {
+                if (largeTab) largeTab.click();
+            }
+
+        }, 600); // আরও ফাস্ট করা হয়েছে (৬০০ মিলি-সেকেন্ড)
     }
 
     function startFilter() {
@@ -113,7 +110,15 @@
         startRefresh(); 
 
         observer = new MutationObserver(() => {
-            if (running) filterAmount();
+            if (running) {
+                clickFirstPaymentOption();
+                if (isConfirmed()) {
+                    playNotificationSound();
+                    stopFilter();
+                } else {
+                    filterAmount();
+                }
+            }
         });
         observer.observe(document.body, { childList: true, subtree: true });
     }
@@ -125,7 +130,7 @@
         statusDot.style.background = '#ef4444';
     }
 
-    // প্যানেল ডিজাইন আপনার আগের মতোই রাখা হয়েছে
+    // প্যানেল ডিজাইন
     const panel = document.createElement('div');
     panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
     panel.innerHTML = `
