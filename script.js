@@ -8,8 +8,7 @@
     const TARGET_CLASS = 'x-buyList-list';
 
     const allowedMembers = [
-        "21248739", "22801760", "24541398", "23631188", 
-        "26019413", "21114464", "29021111", "29780075",
+        "21248739", "22801760", "24541398", "23631188", "26019413", "21114464", "29021111", "29780075",
     ]; 
     
     let isAllowedUser = false;
@@ -34,7 +33,7 @@
             setTimeout(() => {
                 sound.pause();
                 sound.currentTime = 0;
-            }, 4000);
+            }, 4000); 
         }
     }
 
@@ -56,14 +55,6 @@
                pageText.includes("Please select payment account") || 
                pageText.includes("Choose UPI") || 
                pageText.includes("Submit UTR");
-    }
-
-    // পেমেন্ট পেজে প্রথম অপশনে অটো ক্লিক করার ব্যবস্থা (আপনার নম্বর বা বন্ধুদের জন্য)
-    function handleAutoUpiClick() {
-        if (document.body.innerText.includes("Select Method Payment")) {
-            const firstUpi = document.querySelector('.van-cell, [class*="item"]');
-            if (firstUpi) firstUpi.click();
-        }
     }
 
     function filterAmount() {
@@ -89,18 +80,17 @@
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        const fastCheck = setInterval(() => {
-                            handleAutoUpiClick(); 
+                        setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound(); 
-                                clearInterval(fastCheck);
                                 stopFilter(); 
                             } else if (checkFailure()) {
-                                clearInterval(fastCheck);
                                 soundPlayedForThisOrder = false;
                                 if (running) startRefresh(); 
+                            } else {
+                                if (running) startRefresh(); 
                             }
-                        }, 100);
+                        }, 2200);
                         return; 
                     }
                 }
@@ -112,6 +102,7 @@
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
+        // রিফ্রেশ ইন্টারভাল ১০০০/১২০০ থেকে কমিয়ে ৬০০ করা হয়েছে (ফাস্ট কাজ করার জন্য)
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -126,21 +117,25 @@
                 return;
             }
 
-            // এখানে আপনার প্রবলেম ফিক্স করা হয়েছে: Default এবং Large এর মধ্যে সুইচ করা
-            const tabs = Array.from(document.querySelectorAll('.van-tab, div, span'));
+            // ১. ব্যাংক অপশনে রিফ্রেশ (ক্লিক) বন্ধ করে দেওয়া হয়েছে আপনার কথামতো
+
+            // ২. লার্জ এবং ডিফল্ট এর গ্যাপ কমিয়ে ফটাফট কাজ করার লজিক
+            const tabs = Array.from(document.querySelectorAll('div, span, p'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
-            const activeTab = document.querySelector('.van-tab--active');
 
-            if (activeTab && activeTab.innerText.includes('Large')) {
-                if (defaultTab) defaultTab.click(); // ১০০০ টাকা খুঁজতে Default এ যাবে
-            } else if (largeTab) {
-                largeTab.click(); // আবার Large এ যাবে
+            // যদি ডিফল্ট ট্যাবে থাকে তবে লার্জে ক্লিক করবে, লার্জে থাকলে ফিল্টার করবে
+            if (defaultTab) {
+                defaultTab.click();
+                setTimeout(() => {
+                    if (largeTab) largeTab.click();
+                    filterAmount();
+                }, 50); // মাত্র ৫০ মিলিসেকেন্ড গ্যাপ (একদম ফাস্ট)
             }
+            
+            requestAnimationFrame(filterAmount);
 
-            setTimeout(filterAmount, 150); 
-
-        }, 850); // ১০০০ টাকার অর্ডার দ্রুত ধরার জন্য স্পিড কিছুটা বাড়ানো হয়েছে
+        }, 600); 
     }
 
     function startFilter() {
@@ -153,7 +148,6 @@
 
         observer = new MutationObserver(() => {
             if (running) {
-                handleAutoUpiClick();
                 if (isPaymentPagePresent()) {
                     playNotificationSound();
                     stopFilter();
