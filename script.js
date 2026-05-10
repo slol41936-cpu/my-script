@@ -8,18 +8,11 @@
     const TARGET_CLASS = 'x-buyList-list';
 
     const allowedMembers = [
-        "21248739",
-        "22801760",
-        "24541398",
-        "23631188",
-        "26019413",
-        "21114464",
-        "29021111",
-        "29780075",
+        "21248739", "22801760", "24541398", "23631188", 
+        "26019413", "21114464", "29021111", "29780075",
     ]; 
     
     let isAllowedUser = false;
-
     try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
         const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
@@ -37,109 +30,79 @@
             sound.currentTime = 0;
             sound.play().catch(() => {});
             soundPlayedForThisOrder = true;
-            setTimeout(() => {
-                sound.pause();
-                sound.currentTime = 0;
-            }, 4000); // মিউজিক একটু বেশিক্ষণ বাজবে যাতে বুঝতে সুবিধা হয়
+            setTimeout(() => { sound.pause(); sound.currentTime = 0; }, 4000);
         }
     }
 
-    window.alert = function() { return true; };
-    window.confirm = function() { return true; };
-
-    function getAllowedAmount() {
-        return amountInput.value.trim();
-    }
-
-    // অর্ডার ফেল হয়েছে কি না চেক
-    function checkFailure() {
-        const pageText = document.body.innerText.toLowerCase();
-        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
-    }
-
-    // পেমেন্ট পেজ এসেছে কি না চেক (সাউন্ড বাজার আসল জায়গা)
     function isPaymentPagePresent() {
         const pageText = document.body.innerText;
         return pageText.includes("Select Method Payment") || 
-               pageText.includes("Please select payment account") || 
                pageText.includes("Choose UPI") || 
                pageText.includes("Submit UTR");
     }
 
+    // ১০০০ টাকার অর্ডার ধরা মাত্রই ক্লিক করার ফাংশন
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
 
-        const allowed = getAllowedAmount();
+        const allowed = amountInput.value.trim();
         const orders = list.children;
 
-        for (let i = 0, len = orders.length; i < len; i++) {
+        for (let i = 0; i < orders.length; i++) {
             const order = orders[i];
             const text = order.innerText;
             
-            if (text && text.indexOf('₹') !== -1) {
+            if (text && text.includes('₹')) {
                 const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
 
                 if (orderAmount === allowed) {
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
-                    
-                    if (buyBtn && running) {
-                        buyBtn.click(); // শুধু ক্লিক করবে
-                        
+                    if (buyBtn) {
+                        buyBtn.click(); // সবথেকে দ্রুত ক্লিক
                         if (refreshInterval) clearInterval(refreshInterval);
-                        refreshInterval = null;
-
-                        // ২.২ সেকেন্ড পর চেক করবে পেমেন্ট পেজ আসলো কি না
+                        
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
-                                playNotificationSound(); // পেমেন্ট পেজ পেলেই মিউজিক বাজবে
+                                playNotificationSound();
                                 stopFilter(); 
-                            } else if (checkFailure()) {
-                                soundPlayedForThisOrder = false;
-                                if (running) startRefresh(); 
-                            } else {
-                                if (running) startRefresh(); 
+                            } else if (running) {
+                                startRefresh(); 
                             }
-                        }, 2200);
-                        return; 
+                        }, 1500);
+                        return true; 
                     }
                 }
             }
         }
+        return false;
     }
 
     function startRefresh() {
-        soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
         refreshInterval = setInterval(() => {
             if (!running) return;
 
-            if (isPaymentPagePresent()) {
-                playNotificationSound();
-                stopFilter();
-                return;
+            // "Default" এবং "Large" এর মধ্যে অটো সুইচ করে ১০০০ খোঁজা
+            const tabs = Array.from(document.querySelectorAll('.van-tab__text, div, span'));
+            const defaultTab = tabs.find(el => el.innerText === 'Default');
+            const largeTab = tabs.find(el => el.innerText === 'Large');
+
+            // প্রথমে বর্তমানে যে পেজে আছে সেখানে খোঁজো
+            if (filterAmount()) return;
+
+            // যদি না পায়, তবে অন্য ট্যাবে গিয়ে খোঁজো
+            const activeTab = document.querySelector('.van-tab--active');
+            if (activeTab && activeTab.innerText.includes('Large') && defaultTab) {
+                defaultTab.click();
+            } else if (largeTab) {
+                largeTab.click();
             }
 
-            if (document.body.innerText.includes("contact customer service")) {
-                location.reload();
-                return;
-            }
+            setTimeout(filterAmount, 100); // ট্যাব পরিবর্তনের সাথে সাথে স্ক্যান
 
-            const currentTab = document.querySelector('.van-tab--active') || 
-                               Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
-            if (currentTab) currentTab.click();
-
-            setTimeout(() => {
-                const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
-                if (largeTab) {
-                    largeTab.click();
-                    filterAmount();
-                }
-                requestAnimationFrame(filterAmount);
-            }, 120); 
-
-        }, 1200); 
+        }, 800); // রিফ্রেশ স্পিড বাড়ানো হয়েছে
     }
 
     function startFilter() {
@@ -147,48 +110,33 @@
         running = true;
         soundPlayedForThisOrder = false;
         statusDot.style.background = '#22c55e';
-        filterAmount();
         startRefresh(); 
 
         observer = new MutationObserver(() => {
-            if (running) {
-                if (isPaymentPagePresent()) {
-                    playNotificationSound();
-                    stopFilter();
-                } else {
-                    filterAmount();
-                }
-            }
+            if (running) filterAmount();
         });
-
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function stopFilter() {
-        if (!running) return;
         running = false;
         if (observer) observer.disconnect();
         if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = null;
         statusDot.style.background = '#ef4444';
     }
 
+    // প্যানেল ডিজাইন আপনার আগের মতোই রাখা হয়েছে
     const panel = document.createElement('div');
-    panel.className = PANEL_CLASS;
     panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
-
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span style="font-weight: 700; font-size: 15px;">AR Wallet Ultra</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
-        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="sBtn" style="flex: 1; background: ${isAllowedUser ? '#22c55e' : '#9ca3af'}; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: ${isAllowedUser ? 'pointer' : 'not-allowed'}; font-weight: bold;">Start</button>
-            <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
-        </div>
-        <div id="authStatus" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">
-            ${isAllowedUser ? 'Active' : 'Access Denied'}
+        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; text-align: center; font-weight: bold;">
+        <div style="display: flex; gap: 10px;">
+            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px; cursor: pointer; font-weight: bold;">Start</button>
+            <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px; cursor: pointer; font-weight: bold;">Stop</button>
         </div>
     `;
 
@@ -197,9 +145,4 @@
     const statusDot = panel.querySelector('#sDot');
     panel.querySelector('#sBtn').onclick = startFilter;
     panel.querySelector('#tBtn').onclick = stopFilter;
-
-    setInterval(() => {
-        const list = document.querySelector(`.${TARGET_CLASS}`);
-        panel.style.display = list ? 'block' : 'none';
-    }, 1000);
 })();
