@@ -1,74 +1,193 @@
-/* * AR WALLET PERSONAL AUTOMATION 
- * Maintained Logic - All messages in English
- */
-function a0_0x1703(_0x24082f, _0x44ab98) {
-  _0x24082f = _0x24082f - 0x196;
-  const _0x4cfb7e = a0_0x4cfb();
-  let _0x170385 = _0x4cfb7e[_0x24082f];
-  if (a0_0x1703["bPtxJv"] === undefined) {
-    var _0x321e82 = function (_0x1542a8) {
-      const _0x502196 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=";
-      let _0x33429b = "", _0x115a87 = "";
-      for (let _0x1aa4f7 = 0x0, _0x206f72, _0x12a38d, _0x504c77 = 0x0; (_0x12a38d = _0x1542a8["charAt"](_0x504c77++)); ~_0x12a38d && ((_0x206f72 = _0x1aa4f7 % 0x4 ? _0x206f72 * 0x40 + _0x12a38d : _0x12a38d), _0x1aa4f7++ % 0x4) ? (_0x33429b += String["fromCharCode"](0xff & (_0x206f72 >> ((-0x2 * _0x1aa4f7) & 0x6)))) : 0x0) {
-        _0x12a38d = _0x502196["indexOf"](_0x12a38d);
-      }
-      for (let _0x3811dd = 0x0, _0x4820aa = _0x33429b["length"]; _0x3811dd < _0x4820aa; _0x3811dd++) {
-        _0x115a87 += "%" + ("00" + _0x33429b["charCodeAt"](_0x3811dd)["toString"](0x10))["slice"](-0x2);
-      }
-      return decodeURIComponent(_0x115a87);
-    };
-    ((a0_0x1703["LbHxtW"] = _0x321e82), (a0_0x1703["eflYMB"] = {}), (a0_0x1703["bPtxJv"] = !![]));
-  }
-  const _0x22a121 = _0x4cfb7e[0x0], _0x1df100 = _0x24082f + _0x22a121, _0x353ae0 = a0_0x1703["eflYMB"][_0x1df100];
-  return (!_0x353ae0 ? ((_0x170385 = a0_0x1703["LbHxtW"](_0x170385)), (a0_0x1703["eflYMB"][_0x1df100] = _0x170385)) : (_0x170385 = _0x353ae0), _0x170385);
-}
+(function () {
+    let observer = null;
+    let running = false;
+    let refreshInterval = null;
+    let soundPlayedForThisOrder = false;
 
-const ALLOWED_MEMBER_LIST = ["21248739", "22801760", "24541398", "23631188", "26019413", "21114464", "29021111", "29780075"];
+    const PANEL_CLASS = 'amount-filter-panel';
+    const TARGET_CLASS = 'x-buyList-list';
 
-(async function () {
-    const firebaseConfig = {
-        apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-        projectId: "my-ar-automation",
-        appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
-    };
+    const allowedMembers = [
+        "21248739", "22801760", "24541398", "23631188", "26019413", "21114464", "29021111", "29780075",
+    ]; 
+    
+    let isAllowedUser = false;
+    try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
+        if (memberId && allowedMembers.includes(String(memberId))) {
+            isAllowedUser = true;
+        }
+    } catch (e) {}
 
-    function verifyUser() {
-        try {
-            const userData = JSON.parse(localStorage.getItem("userInfo"));
-            const currentId = String(userData?.value?.memberId || userData?.value?.memberld || "");
-            if (ALLOWED_MEMBER_LIST.includes(currentId)) {
-                console.log("Access Verified for ID: " + currentId);
-                return true;
-            } else {
-                alert("Unauthorized User: Access Denied");
-                return false;
-            }
-        } catch (e) {
-            console.error("System Error during Verification");
-            return false;
+    const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
+    sound.loop = false;
+    sound.volume = 1;
+
+    // ভিজ্যুয়াল হাইডিং যাতে চোখে না লাগে
+    const style = document.createElement('style');
+    style.innerHTML = `.hiding-tabs .van-tabs__content { opacity: 0.98 !important; pointer-events: auto !important; }`;
+    document.head.appendChild(style);
+
+    function playNotificationSound() {
+        if (!soundPlayedForThisOrder) {
+            soundPlayedForThisOrder = true;
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+            setTimeout(() => {
+                sound.pause();
+                sound.currentTime = 0;
+            }, 4000); 
         }
     }
 
-    if (!verifyUser()) return;
+    function checkFailure() {
+        const pageText = document.body.innerText.toLowerCase();
+        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
+    }
 
-    // Load Firebase
-    if (!window.firebase) {
-        const load = (url) => new Promise(res => {
-            const s = document.createElement('script');
-            s.src = url;
-            s.onload = res;
-            document.head.appendChild(s);
+    function isPaymentPagePresent() {
+        const pageText = document.body.innerText;
+        return pageText.includes("Select Method Payment") || pageText.includes("Submit UTR") || pageText.includes("Bank card number");
+    }
+
+    function forceBankRefresh() {
+        const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
+        const bankTab = tabs.find(el => el.innerText?.trim() === 'Bank');
+        if (bankTab) bankTab.click(); 
+    }
+
+    // এটিই সেই মেইন শক্তি যা সবার আগে অর্ডার টেনে আনবে
+    function fastCapture() {
+        const list = document.querySelector(`.${TARGET_CLASS}`);
+        if (!list || !running) return false;
+
+        const allowed = amountInput.value.trim();
+        const orders = list.children;
+
+        for (let i = 0; i < orders.length; i++) {
+            const order = orders[i];
+            const text = order.innerText;
+            if (text && text.includes('₹')) {
+                const amount = text.replace(/,/g, '').match(/\d+/g)?.[0];
+                if (amount === allowed) {
+                    order.style.display = "block";
+                    const btn = order.querySelector('button') || order.querySelector('.van-button');
+                    if (btn && running && !checkFailure()) {
+                        btn.click(); // সবার আগে ক্লিক
+                        if (refreshInterval) clearInterval(refreshInterval);
+                        refreshInterval = null;
+                        
+                        setTimeout(() => {
+                            if (isPaymentPagePresent()) {
+                                playNotificationSound();
+                                stopFilter();
+                            } else if (checkFailure()) {
+                                forceBankRefresh(); 
+                                soundPlayedForThisOrder = false;
+                                setTimeout(startRefresh, 200); 
+                            } else {
+                                startRefresh();
+                            }
+                        }, 600); // আরও ফাস্ট রেসপন্স
+                        return true;
+                    }
+                } else {
+                    order.style.display = "none";
+                }
+            }
+        }
+        return false;
+    }
+
+    function startRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        document.body.classList.add('hiding-tabs'); 
+
+        refreshInterval = setInterval(() => {
+            if (!running) return;
+
+            if (isPaymentPagePresent()) {
+                playNotificationSound();
+                stopFilter();
+                return;
+            }
+
+            if (checkFailure()) forceBankRefresh();
+
+            const tabs = Array.from(document.querySelectorAll('.van-tab, span, div'));
+            const defTab = tabs.find(el => el.innerText?.trim() === 'Default');
+            const largeTab = tabs.find(el => el.innerText?.trim() === 'Large');
+
+            // লজিক: স্ক্রিনে আসার আগেই যেন টেনে নেয়
+            if (!fastCapture()) {
+                if (defTab) {
+                    defTab.click();
+                    // এই গ্যাপটাই আপনার বন্ধুর কোডকে জেতাত, আমি এটা কমিয়ে দিয়েছি
+                    setTimeout(() => {
+                        if (largeTab) {
+                            largeTab.click();
+                            fastCapture(); // লার্জে যাওয়ার সাথে সাথেই চেক
+                        }
+                    }, 10); 
+                }
+            }
+        }, 350); // রিফ্রেশ স্পিড সর্বোচ্চ পর্যায়ে (৩৫০ms)
+    }
+
+    function startFilter() {
+        if (!isAllowedUser || running) return;
+        running = true;
+        soundPlayedForThisOrder = false;
+        statusDot.style.background = '#22c55e';
+        startRefresh();
+        
+        observer = new MutationObserver(() => {
+            if (running) {
+                if (isPaymentPagePresent()) {
+                    playNotificationSound();
+                    stopFilter();
+                } else {
+                    fastCapture();
+                }
+            }
         });
-        await load("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-        await load("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+    function stopFilter() {
+        running = false;
+        document.body.classList.remove('hiding-tabs');
+        if (observer) observer.disconnect();
+        if (refreshInterval) clearInterval(refreshInterval);
+        statusDot.style.background = '#ef4444';
+        const list = document.querySelector(`.${TARGET_CLASS}`);
+        if (list) Array.from(list.children).forEach(o => o.style.display = "block");
     }
 
-    console.log("Automation Active...");
-    
-    // Original Obfuscated Logic starts here
-    // [বন্ধুর দেওয়া সেই বাকি বড় কোডটি এখানে অটোমেটিক কাজ করবে]
+    const panel = document.createElement('div');
+    panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
+    panel.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+        </div>
+        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
+            <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
+        </div>
+        <div id="auth" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">${isAllowedUser ? 'Active' : 'Access Denied'}</div>
+    `;
+    document.body.appendChild(panel);
+    const amountInput = panel.querySelector('#amtInp');
+    const statusDot = panel.querySelector('#sDot');
+    panel.querySelector('#sBtn').onclick = startFilter;
+    panel.querySelector('#tBtn').onclick = stopFilter;
+
+    setInterval(() => {
+        const list = document.querySelector(`.${TARGET_CLASS}`);
+        panel.style.display = list ? 'block' : 'none';
+    }, 1000);
 })();
+                              
