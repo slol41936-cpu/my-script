@@ -1,4 +1,35 @@
 (function () {
+    // --- FIREBASE SETUP START ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
+        authDomain: "my-ar-automation.firebaseapp.com",
+        projectId: "my-ar-automation",
+        storageBucket: "my-ar-automation.firebasestorage.app",
+        messagingSenderId: "443374813761",
+        appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
+    };
+
+    // Firebase Libraries Loading
+    if (!window.firebase) {
+        const s1 = document.createElement('script');
+        s1.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js";
+        document.head.appendChild(s1);
+        const s2 = document.createElement('script');
+        s2.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js";
+        document.head.appendChild(s2);
+    }
+
+    function saveOrderToFirebase(orderData) {
+        if (window.firebase && firebase.apps.length > 0) {
+            const db = firebase.firestore();
+            db.collection("orders").add({
+                ...orderData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(e => console.log("Firebase Error"));
+        }
+    }
+    // --- FIREBASE SETUP END ---
+
     let observer = null;
     let running = false;
     let refreshInterval = null;
@@ -12,10 +43,11 @@
     ]; 
     
     let isAllowedUser = false;
+    let currentMemberId = "";
     try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
-        if (memberId && allowedMembers.includes(String(memberId))) {
+        currentMemberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
+        if (currentMemberId && allowedMembers.includes(String(currentMemberId))) {
             isAllowedUser = true;
         }
     } catch (e) {}
@@ -24,7 +56,6 @@
     sound.loop = false;
     sound.volume = 1;
 
-    // ভিজ্যুয়াল হাইডিং যাতে চোখে না লাগে
     const style = document.createElement('style');
     style.innerHTML = `.hiding-tabs .van-tabs__content { opacity: 0.98 !important; pointer-events: auto !important; }`;
     document.head.appendChild(style);
@@ -57,7 +88,6 @@
         if (bankTab) bankTab.click(); 
     }
 
-    // এটিই সেই মেইন শক্তি যা সবার আগে অর্ডার টেনে আনবে
     function fastCapture() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
@@ -74,7 +104,15 @@
                     order.style.display = "block";
                     const btn = order.querySelector('button') || order.querySelector('.van-button');
                     if (btn && running && !checkFailure()) {
-                        btn.click(); // সবার আগে ক্লিক
+                        btn.click(); 
+                        
+                        // Firebase এ ডাটা পাঠানো
+                        saveOrderToFirebase({
+                            memberId: currentMemberId,
+                            amount: amount,
+                            status: "Clicked"
+                        });
+
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
                         
@@ -89,7 +127,7 @@
                             } else {
                                 startRefresh();
                             }
-                        }, 600); // আরও ফাস্ট রেসপন্স
+                        }, 600); 
                         return true;
                     }
                 } else {
@@ -119,24 +157,28 @@
             const defTab = tabs.find(el => el.innerText?.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText?.trim() === 'Large');
 
-            // লজিক: স্ক্রিনে আসার আগেই যেন টেনে নেয়
             if (!fastCapture()) {
                 if (defTab) {
                     defTab.click();
-                    // এই গ্যাপটাই আপনার বন্ধুর কোডকে জেতাত, আমি এটা কমিয়ে দিয়েছি
                     setTimeout(() => {
                         if (largeTab) {
                             largeTab.click();
-                            fastCapture(); // লার্জে যাওয়ার সাথে সাথেই চেক
+                            fastCapture(); 
                         }
                     }, 10); 
                 }
             }
-        }, 350); // রিফ্রেশ স্পিড সর্বোচ্চ পর্যায়ে (৩৫০ms)
+        }, 350); 
     }
 
     function startFilter() {
         if (!isAllowedUser || running) return;
+        
+        // Initialize Firebase on Start
+        if (window.firebase && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
         running = true;
         soundPlayedForThisOrder = false;
         statusDot.style.background = '#22c55e';
@@ -190,4 +232,3 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
-                              
