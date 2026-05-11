@@ -24,9 +24,9 @@
     sound.loop = false;
     sound.volume = 1;
 
-    // ভিজ্যুয়াল হাইডিং CSS (ট্যাব পাল্টানো চোখে লাগবে না)
+    // ভিজ্যুয়াল হাইডিং যাতে চোখে না লাগে
     const style = document.createElement('style');
-    style.innerHTML = `.hiding-tabs .van-tabs__content, .hiding-tabs .${TARGET_CLASS} { opacity: 0.98 !important; }`;
+    style.innerHTML = `.hiding-tabs .van-tabs__content { opacity: 0.98 !important; pointer-events: auto !important; }`;
     document.head.appendChild(style);
 
     function playNotificationSound() {
@@ -51,34 +51,30 @@
         return pageText.includes("Select Method Payment") || pageText.includes("Submit UTR") || pageText.includes("Bank card number");
     }
 
-    // আপনার চাহিদা মতো ব্যাঙ্ক রিফ্রেশ লজিক
     function forceBankRefresh() {
         const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
-        const bankTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Bank');
-        if (bankTab) {
-            bankTab.click(); // মিস হলে একবার ব্যাঙ্ক রিফ্রেশ করবে
-        }
+        const bankTab = tabs.find(el => el.innerText?.trim() === 'Bank');
+        if (bankTab) bankTab.click(); 
     }
 
-    function filterAndHide() {
+    // এটিই সেই মেইন শক্তি যা সবার আগে অর্ডার টেনে আনবে
+    function fastCapture() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
 
         const allowed = amountInput.value.trim();
-        const orders = Array.from(list.children);
+        const orders = list.children;
 
-        let foundTarget = false;
-        orders.forEach(order => {
+        for (let i = 0; i < orders.length; i++) {
+            const order = orders[i];
             const text = order.innerText;
             if (text && text.includes('₹')) {
                 const amount = text.replace(/,/g, '').match(/\d+/g)?.[0];
                 if (amount === allowed) {
                     order.style.display = "block";
-                    foundTarget = true;
                     const btn = order.querySelector('button') || order.querySelector('.van-button');
-                    
                     if (btn && running && !checkFailure()) {
-                        btn.click();
+                        btn.click(); // সবার আগে ক্লিক
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
                         
@@ -87,21 +83,21 @@
                                 playNotificationSound();
                                 stopFilter();
                             } else if (checkFailure()) {
-                                // অর্ডার মিস হলে এখানে ব্যাঙ্ক রিফ্রেশ করবে
                                 forceBankRefresh(); 
                                 soundPlayedForThisOrder = false;
-                                setTimeout(startRefresh, 300); // সামান্য গ্যাপ দিয়ে আবার শুরু
+                                setTimeout(startRefresh, 200); 
                             } else {
                                 startRefresh();
                             }
-                        }, 800);
+                        }, 600); // আরও ফাস্ট রেসপন্স
+                        return true;
                     }
                 } else {
                     order.style.display = "none";
                 }
             }
-        });
-        return foundTarget;
+        }
+        return false;
     }
 
     function startRefresh() {
@@ -117,23 +113,26 @@
                 return;
             }
 
-            if (checkFailure()) {
-                forceBankRefresh(); // এরর মেসেজ থাকলেও ব্যাঙ্ক রিফ্রেশ করবে
-            }
+            if (checkFailure()) forceBankRefresh();
 
             const tabs = Array.from(document.querySelectorAll('.van-tab, span, div'));
             const defTab = tabs.find(el => el.innerText?.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText?.trim() === 'Large');
 
-            if (!filterAndHide()) {
+            // লজিক: স্ক্রিনে আসার আগেই যেন টেনে নেয়
+            if (!fastCapture()) {
                 if (defTab) {
                     defTab.click();
+                    // এই গ্যাপটাই আপনার বন্ধুর কোডকে জেতাত, আমি এটা কমিয়ে দিয়েছি
                     setTimeout(() => {
-                        if (largeTab) largeTab.click();
-                    }, 20); 
+                        if (largeTab) {
+                            largeTab.click();
+                            fastCapture(); // লার্জে যাওয়ার সাথে সাথেই চেক
+                        }
+                    }, 10); 
                 }
             }
-        }, 400); 
+        }, 350); // রিফ্রেশ স্পিড সর্বোচ্চ পর্যায়ে (৩৫০ms)
     }
 
     function startFilter() {
@@ -149,7 +148,7 @@
                     playNotificationSound();
                     stopFilter();
                 } else {
-                    filterAndHide();
+                    fastCapture();
                 }
             }
         });
@@ -191,3 +190,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+            
