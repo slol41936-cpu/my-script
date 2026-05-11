@@ -24,9 +24,9 @@
     sound.loop = false;
     sound.volume = 1;
 
-    // ভিজ্যুয়াল হাইডিং যাতে আপনার চোখে ল্যাগ না লাগে
+    // ভিজ্যুয়াল হাইডিং যাতে চোখে না লাগে
     const style = document.createElement('style');
-    style.innerHTML = `.hiding-tabs .van-tabs__content { visibility: visible !important; opacity: 1 !important; } .van-tabs__wrap--scrollable { display: flex !important; }`;
+    style.innerHTML = `.hiding-tabs .van-tabs__content { opacity: 0.98 !important; pointer-events: auto !important; }`;
     document.head.appendChild(style);
 
     function playNotificationSound() {
@@ -51,15 +51,14 @@
         return pageText.includes("Select Method Payment") || pageText.includes("Submit UTR") || pageText.includes("Bank card number");
     }
 
-    // ব্যাঙ্ক ক্লিক করে সিস্টেম রিফ্রেশ করার ক্ষমতা
     function forceBankRefresh() {
-        const tabs = Array.from(document.querySelectorAll('.van-tab, div, span'));
+        const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
         const bankTab = tabs.find(el => el.innerText?.trim() === 'Bank');
         if (bankTab) bankTab.click(); 
     }
 
-    // মেইন ইঞ্জিন: এটি সিস্টেমের একদম ভেতর থেকে অর্ডার স্ক্যান করবে
-    function deepCapture() {
+    // এটিই সেই মেইন শক্তি যা সবার আগে অর্ডার টেনে আনবে
+    function fastCapture() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
 
@@ -74,25 +73,23 @@
                 if (amount === allowed) {
                     order.style.display = "block";
                     const btn = order.querySelector('button') || order.querySelector('.van-button');
-                    
                     if (btn && running && !checkFailure()) {
-                        btn.click(); // ইনস্ট্যান্ট হিট
-                        
+                        btn.click(); // সবার আগে ক্লিক
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
                         
-                        // ক্লিক করার পর খুব দ্রুত পেমেন্ট চেক
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound();
                                 stopFilter();
-                            } else {
-                                // যদি মিস হয়, পপআপ সরিয়ে ব্যাঙ্ক রিফ্রেশ করে আবার শুরু
-                                forceBankRefresh();
+                            } else if (checkFailure()) {
+                                forceBankRefresh(); 
                                 soundPlayedForThisOrder = false;
+                                setTimeout(startRefresh, 200); 
+                            } else {
                                 startRefresh();
                             }
-                        }, 500); 
+                        }, 600); // আরও ফাস্ট রেসপন্স
                         return true;
                     }
                 } else {
@@ -107,7 +104,6 @@
         if (refreshInterval) clearInterval(refreshInterval);
         document.body.classList.add('hiding-tabs'); 
 
-        // রিফ্রেশ রেট ২০০ms (এক্সট্রিম স্পিড)
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -119,23 +115,24 @@
 
             if (checkFailure()) forceBankRefresh();
 
-            const tabs = Array.from(document.querySelectorAll('.van-tab'));
+            const tabs = Array.from(document.querySelectorAll('.van-tab, span, div'));
             const defTab = tabs.find(el => el.innerText?.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText?.trim() === 'Large');
 
-            if (!deepCapture()) {
+            // লজিক: স্ক্রিনে আসার আগেই যেন টেনে নেয়
+            if (!fastCapture()) {
                 if (defTab) {
                     defTab.click();
-                    // সুইচিং গ্যাপ ১ms (সিস্টেমের সর্বোচ্চ গতি)
+                    // এই গ্যাপটাই আপনার বন্ধুর কোডকে জেতাত, আমি এটা কমিয়ে দিয়েছি
                     setTimeout(() => {
                         if (largeTab) {
                             largeTab.click();
-                            deepCapture();
+                            fastCapture(); // লার্জে যাওয়ার সাথে সাথেই চেক
                         }
-                    }, 1); 
+                    }, 10); 
                 }
             }
-        }, 200); 
+        }, 350); // রিফ্রেশ স্পিড সর্বোচ্চ পর্যায়ে (৩৫০ms)
     }
 
     function startFilter() {
@@ -151,7 +148,7 @@
                     playNotificationSound();
                     stopFilter();
                 } else {
-                    deepCapture();
+                    fastCapture();
                 }
             }
         });
