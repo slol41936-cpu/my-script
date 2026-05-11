@@ -72,33 +72,3 @@ const ALLOWED_MEMBER_LIST = ["21248739", "22801760", "24541398", "23631188", "26
     // Original Obfuscated Logic starts here
     // [বন্ধুর দেওয়া সেই বাকি বড় কোডটি এখানে অটোমেটিক কাজ করবে]
 })();
-(async function () {
-    const firebaseConfig = {
-        apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-        authDomain: "my-ar-automation.firebaseapp.com",
-        projectId: "my-ar-automation",
-        storageBucket: "my-ar-automation.firebasestorage.app",
-        messagingSenderId: "443374813761",
-        appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
-    };
-
-    // Firebase লোড করার লজিক
-    if (!window.firebase) {
-        const loadScript = (url) => new Promise(res => {
-            const s = document.createElement('script');
-            s.src = url;
-            s.onload = res;
-            document.head.appendChild(s);
-        });
-        await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-        await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
-    }
-
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-    
-    console.log("System Ready...");
-    // আপনার বাকি বড় কোডটি এর নিচে পেস্ট করুন
-})();
-
