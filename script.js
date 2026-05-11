@@ -24,7 +24,7 @@
     sound.loop = false;
     sound.volume = 1;
 
-    // ভিজ্যুয়াল হাইডিং CSS
+    // ভিজ্যুয়াল হাইডিং CSS (ট্যাব পাল্টানো চোখে লাগবে না)
     const style = document.createElement('style');
     style.innerHTML = `.hiding-tabs .van-tabs__content, .hiding-tabs .${TARGET_CLASS} { opacity: 0.98 !important; }`;
     document.head.appendChild(style);
@@ -41,16 +41,6 @@
         }
     }
 
-    // যেকোনো পপ-আপ বা এরর মেসেজ দ্রুত বন্ধ করার মেইন ফাংশন
-    function clearPopupsAndErrors() {
-        const popupButtons = document.querySelectorAll('.van-button--default, .van-dialog__confirm, .van-popup__close-icon');
-        if (popupButtons.length > 0) {
-            popupButtons.forEach(btn => btn.click());
-            return true; // মেসেজ ছিল এবং সরানো হয়েছে
-        }
-        return false;
-    }
-
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
         return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
@@ -61,13 +51,16 @@
         return pageText.includes("Select Method Payment") || pageText.includes("Submit UTR") || pageText.includes("Bank card number");
     }
 
-    function filterAndHide() {
-        if (checkFailure()) {
-            clearPopupsAndErrors();
-            startRefresh(); // এরর থাকলে সাথে সাথে রিস্টার্ট
-            return false;
+    // আপনার চাহিদা মতো ব্যাঙ্ক রিফ্রেশ লজিক
+    function forceBankRefresh() {
+        const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
+        const bankTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Bank');
+        if (bankTab) {
+            bankTab.click(); // মিস হলে একবার ব্যাঙ্ক রিফ্রেশ করবে
         }
+    }
 
+    function filterAndHide() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
 
@@ -82,29 +75,26 @@
                 if (amount === allowed) {
                     order.style.display = "block";
                     foundTarget = true;
-                    
                     const btn = order.querySelector('button') || order.querySelector('.van-button');
-                    if (btn && running) {
-                        // ক্লিক করার আগে নিশ্চিত হওয়া যে কোনো পপ-আপ নেই
-                        if (!document.querySelector('.van-dialog, .van-popup')) {
-                            btn.click();
-                            
-                            if (refreshInterval) clearInterval(refreshInterval);
-                            refreshInterval = null;
-                            
-                            // ক্লিক করার পর খুব দ্রুত রেজাল্ট চেক
-                            setTimeout(() => {
-                                if (isPaymentPagePresent()) {
-                                    playNotificationSound();
-                                    stopFilter();
-                                } else {
-                                    // অর্ডার মিস হয়েছে, পপ-আপ সরাও এবং রিস্টার্ট করো
-                                    clearPopupsAndErrors();
-                                    soundPlayedForThisOrder = false;
-                                    startRefresh();
-                                }
-                            }, 600); // আরও ফাস্ট চেক (৬০০ms)
-                        }
+                    
+                    if (btn && running && !checkFailure()) {
+                        btn.click();
+                        if (refreshInterval) clearInterval(refreshInterval);
+                        refreshInterval = null;
+                        
+                        setTimeout(() => {
+                            if (isPaymentPagePresent()) {
+                                playNotificationSound();
+                                stopFilter();
+                            } else if (checkFailure()) {
+                                // অর্ডার মিস হলে এখানে ব্যাঙ্ক রিফ্রেশ করবে
+                                forceBankRefresh(); 
+                                soundPlayedForThisOrder = false;
+                                setTimeout(startRefresh, 300); // সামান্য গ্যাপ দিয়ে আবার শুরু
+                            } else {
+                                startRefresh();
+                            }
+                        }, 800);
                     }
                 } else {
                     order.style.display = "none";
@@ -127,8 +117,9 @@
                 return;
             }
 
-            // যদি রিফ্রেশ করার সময় কোনো এরর মেসেজ সামনে আসে
-            clearPopupsAndErrors();
+            if (checkFailure()) {
+                forceBankRefresh(); // এরর মেসেজ থাকলেও ব্যাঙ্ক রিফ্রেশ করবে
+            }
 
             const tabs = Array.from(document.querySelectorAll('.van-tab, span, div'));
             const defTab = tabs.find(el => el.innerText?.trim() === 'Default');
