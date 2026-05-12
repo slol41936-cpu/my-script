@@ -1,204 +1,293 @@
 (function () {
-    let observer = null;
-    let running = false;
-    let refreshInterval = null;
-    let soundPlayedForThisOrder = false;
+    // ============================================================
+    //  AR Wallet PRO — Advanced Edition
+    //  fixes: missed-order skip, faster polling, no repeat-click
+    // ============================================================
 
-    const PANEL_CLASS = 'amount-filter-panel';
+    /* ---------- CONFIG (সহজে বদলাও) ---------- */
+    const POLL_MS          = 180;   // মূল poll speed (ms) — কম = দ্রুত
+    const CLICK_COOLDOWN_MS = 900;  // একটা click-এর পরে অপেক্ষা
+    const PAYMENT_WAIT_MS  = 1400;  // payment page check delay
+    const TAB_SWITCH_MS    = 35;    // Default↔Large switch gap
+    const SOUND_LIMIT_MS   = 4000;  // sound কতক্ষণ চলবে
+    /* ----------------------------------------- */
+
     const TARGET_CLASS = 'x-buyList-list';
+    const PANEL_CLASS  = 'arw-panel-v2';
 
     const allowedMembers = [
-        "21248739", "22801760", "24541398", "23631188", "26019413", "21114464", "29021111", "29780075",
-    ]; 
-    
+        "21248739","22801760","24541398","23631188",
+        "26019413","21114464","29021111","29780075",
+    ];
+
+    /* ---------- AUTH ---------- */
     let isAllowedUser = false;
-
     try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
-        if (memberId && allowedMembers.includes(String(memberId))) {
-            isAllowedUser = true;
-        }
-    } catch (e) {}
+        const ui  = JSON.parse(localStorage.getItem("userInfo"));
+        const mid = ui?.value?.memberld || ui?.value?.memberId;
+        if (mid && allowedMembers.includes(String(mid))) isAllowedUser = true;
+    } catch (_) {}
 
-    const sound = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
-    sound.loop = false;
+    /* ---------- STATE ---------- */
+    let running              = false;
+    let pollTimer            = null;
+    let observer             = null;
+    let soundPlayed          = false;
+    let lastClickedAmount    = null;   // ← শেষ যে amount-এ click হয়েছে
+    let lastClickedTime      = 0;      // ← সেই click-এর সময়
+    let missedOrderAmount    = null;   // ← miss হলে সেই amount skip করতে
+    let skipUntil            = 0;      // ← কতক্ষণ skip করব
+
+    /* ---------- SOUND ---------- */
+    const sound = new Audio(
+        "https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3"
+    );
+    sound.loop   = false;
     sound.volume = 1;
 
-    function playNotificationSound() {
-        if (!soundPlayedForThisOrder) {
-            sound.currentTime = 0;
-            sound.play().catch(() => {});
-            soundPlayedForThisOrder = true;
-            setTimeout(() => {
-                sound.pause();
-                sound.currentTime = 0;
-            }, 4000); 
-        }
+    function playSound() {
+        if (soundPlayed) return;
+        sound.currentTime = 0;
+        sound.play().catch(() => {});
+        soundPlayed = true;
+        setTimeout(() => { sound.pause(); sound.currentTime = 0; }, SOUND_LIMIT_MS);
     }
 
-    window.alert = function() { return true; };
-    window.confirm = function() { return true; };
+    /* ---------- DIALOG SUPPRESSION ---------- */
+    window.alert   = () => true;
+    window.confirm = () => true;
 
-    function getAllowedAmount() {
-        return amountInput.value.trim();
+    /* ---------- HELPERS ---------- */
+    function getTargetAmount() { return amountInput.value.trim(); }
+
+    function isPaymentPage() {
+        const t = document.body.innerText;
+        return t.includes("Select Method Payment")
+            || t.includes("Please select payment account")
+            || t.includes("Choose UPI")
+            || t.includes("Submit UTR");
     }
 
-    function checkFailure() {
-        const pageText = document.body.innerText.toLowerCase();
-        return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
+    function isFailedPage() {
+        const t = document.body.innerText.toLowerCase();
+        return t.includes("someone else")
+            || t.includes("bought by")
+            || t.includes("already taken")
+            || t.includes("failed");
     }
 
-    function isPaymentPagePresent() {
-        const pageText = document.body.innerText;
-        return pageText.includes("Select Method Payment") || 
-               pageText.includes("Please select payment account") || 
-               pageText.includes("Choose UPI") || 
-               pageText.includes("Submit UTR");
+    function isCrashPage() {
+        return document.body.innerText.includes("contact customer service");
     }
 
-    // আপনার বন্ধুর কোডের মতো "টেনে আনা" বা ফাস্ট ফিল্টার লজিক
-    function filterAmount() {
+    /* ============================================================
+       CORE — অর্ডার খোঁজা ও click
+       returns: 'clicked' | 'not_found' | 'all_skipped'
+    ============================================================ */
+    function tryBuy() {
+        if (!running) return 'not_found';
+
         const list = document.querySelector(`.${TARGET_CLASS}`);
-        if (!list || !running) return false;
+        if (!list) return 'not_found';
 
-        const allowed = getAllowedAmount();
-        const orders = list.children;
+        const target   = getTargetAmount();
+        const now      = Date.now();
+        const orders   = Array.from(list.children);
 
-        for (let i = 0, len = orders.length; i < len; i++) {
-            const order = orders[i];
+        // ── প্রতিটা অর্ডার scan করো ──
+        for (const order of orders) {
             const text = order.innerText;
-            
-            if (text && text.indexOf('₹') !== -1) {
-                const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
+            if (!text || !text.includes('₹')) continue;
 
-                if (orderAmount === allowed) {
-                    const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
-                    
-                    if (buyBtn && running) {
-                        buyBtn.click(); 
-                        
-                        if (refreshInterval) clearInterval(refreshInterval);
-                        refreshInterval = null;
+            const amtMatch = text.replace(/,/g, '').match(/₹\s*(\d+)/);
+            if (!amtMatch) continue;
+            const orderAmt = amtMatch[1];
 
-                        setTimeout(() => {
-                            if (isPaymentPagePresent()) {
-                                playNotificationSound(); 
-                                stopFilter(); 
-                            } else if (checkFailure() || running) {
-                                soundPlayedForThisOrder = false;
-                                startRefresh(); 
-                            }
-                        }, 1800);
-                        return true; 
-                    }
-                }
-            }
-        }
-        return false;
-    }
+            if (orderAmt !== target) continue;  // amount মিলছে না — পরের টায় যাও
 
-    function startRefresh() {
-        soundPlayedForThisOrder = false;
-        if (refreshInterval) clearInterval(refreshInterval);
-        
-        refreshInterval = setInterval(() => {
-            if (!running) return;
+            // ── আগের click-এর cooldown চলছে কিনা দেখো ──
+            if (now - lastClickedTime < CLICK_COOLDOWN_MS) return 'cooldown';
 
-            if (isPaymentPagePresent()) {
-                playNotificationSound();
-                stopFilter();
-                return;
+            // ── miss হওয়া অর্ডার skip window চলছে কিনা ──
+            if (orderAmt === missedOrderAmount && now < skipUntil) {
+                // এই অর্ডারটা skip — পরের order নেই তাই 'all_skipped'
+                return 'all_skipped';
             }
 
-            if (document.body.innerText.includes("contact customer service")) {
-                location.reload();
-                return;
-            }
+            // ── Buy button খোঁজো ──
+            const btn = order.querySelector('button, .van-button');
+            if (!btn) continue;
 
-            // ১. আপনার কথা মতো ব্যাঙ্ক অপশনে ক্লিক বন্ধ করা হয়েছে।
-            
-            // ২. লার্জ এবং ডিফল্ট এর মধ্যে ফাস্ট সুইচিং
-            const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
-            const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
-            const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
+            // ── CLICK! ──
+            btn.click();
+            lastClickedAmount = orderAmt;
+            lastClickedTime   = now;
+            missedOrderAmount  = null;   // নতুন click — পুরনো skip সরাও
+            skipUntil          = 0;
 
-            // যদি ১০০০ না পায় তবেই ট্যাব সুইচ করবে, যাতে বড় অর্ডার না আসে
-            const found = filterAmount();
-            
-            if (!found) {
-                // খুব দ্রুত লার্জ থেকে ডিফল্টে আসা যাওয়া করবে
-                if (defaultTab) {
-                    defaultTab.click();
-                    setTimeout(() => {
-                        if (largeTab) largeTab.click();
-                    }, 40); // গ্যাপ কমিয়ে দেওয়া হয়েছে
-                }
-            }
+            statusMsg.textContent = `⚡ Clicked ₹${orderAmt}`;
 
-            requestAnimationFrame(filterAmount);
-
-        }, 550); // রিফ্রেশ টাইমিং আরও ফাস্ট করা হয়েছে
-    }
-
-    function startFilter() {
-        if (!isAllowedUser || running) return;
-        running = true;
-        soundPlayedForThisOrder = false;
-        statusDot.style.background = '#22c55e';
-        filterAmount();
-        startRefresh(); 
-
-        observer = new MutationObserver(() => {
-            if (running) {
-                if (isPaymentPagePresent()) {
-                    playNotificationSound();
-                    stopFilter();
+            // PAYMENT PAGE চেক
+            setTimeout(() => {
+                if (isPaymentPage()) {
+                    playSound();
+                    stopBot();
+                    statusMsg.textContent = `✅ Order Placed ₹${orderAmt}`;
+                } else if (isFailedPage()) {
+                    // ── MISS হয়েছে → skip করো, পরের অর্ডারে যাও ──
+                    missedOrderAmount = orderAmt;
+                    skipUntil         = Date.now() + 3000; // 3 সেকেন্ড skip
+                    soundPlayed       = false;
+                    statusMsg.textContent = `⚠️ Missed ₹${orderAmt} — skipping`;
+                    restartPoll();
                 } else {
-                    filterAmount();
+                    // unknown state — চালিয়ে যাও
+                    soundPlayed = false;
+                    restartPoll();
                 }
-            }
-        });
+            }, PAYMENT_WAIT_MS);
 
+            return 'clicked';
+        }
+
+        return 'not_found';
+    }
+
+    /* ---------- TAB SWITCHER (Default ↔ Large) ---------- */
+    function switchTabs() {
+        const allEls     = document.querySelectorAll('div, span, .van-tab');
+        let defaultTab = null, largeTab = null;
+        allEls.forEach(el => {
+            const t = el.innerText?.trim();
+            if (t === 'Default') defaultTab = el;
+            if (t === 'Large')   largeTab   = el;
+        });
+        if (defaultTab) {
+            defaultTab.click();
+            setTimeout(() => { if (largeTab) largeTab.click(); }, TAB_SWITCH_MS);
+        }
+    }
+
+    /* ---------- MAIN POLL LOOP ---------- */
+    function poll() {
+        if (!running) return;
+
+        // crash check
+        if (isCrashPage()) { location.reload(); return; }
+
+        // payment page check (race condition guard)
+        if (isPaymentPage()) { playSound(); stopBot(); return; }
+
+        const result = tryBuy();
+
+        if (result === 'clicked' || result === 'cooldown') {
+            // click হয়েছে — PAYMENT_WAIT_MS পরে আবার শুরু হবে callback থেকে
+            return;
+        }
+
+        // অর্ডার পাওয়া যায়নি বা skip — tab switch + আবার poll
+        if (result === 'not_found' || result === 'all_skipped') {
+            switchTabs();
+        }
+
+        // পরের poll schedule
+        pollTimer = setTimeout(poll, POLL_MS);
+    }
+
+    function restartPoll() {
+        if (pollTimer) clearTimeout(pollTimer);
+        pollTimer = setTimeout(poll, POLL_MS);
+    }
+
+    /* ---------- MutationObserver (DOM change হলে তাৎক্ষণিক চেক) ---------- */
+    function attachObserver() {
+        if (observer) observer.disconnect();
+        observer = new MutationObserver(() => {
+            if (!running) return;
+            if (isPaymentPage()) { playSound(); stopBot(); return; }
+            // poll running থাকলে extra trigger দরকার নেই
+        });
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    function stopFilter() {
-        if (!running) return;
-        running = false;
-        if (observer) observer.disconnect();
-        if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = null;
-        statusDot.style.background = '#ef4444';
+    /* ---------- START / STOP ---------- */
+    function startBot() {
+        if (!isAllowedUser || running) return;
+        running           = true;
+        soundPlayed       = false;
+        missedOrderAmount = null;
+        skipUntil         = 0;
+        lastClickedTime   = 0;
+        statusDot.style.background = '#22c55e';
+        statusMsg.textContent = '🟢 Running...';
+        attachObserver();
+        poll();
     }
 
+    function stopBot() {
+        if (!running) return;
+        running = false;
+        if (pollTimer) clearTimeout(pollTimer);
+        if (observer)  observer.disconnect();
+        statusDot.style.background = '#ef4444';
+        if (!statusMsg.textContent.startsWith('✅')) {
+            statusMsg.textContent = '🔴 Stopped';
+        }
+    }
+
+    /* ============================================================
+       UI PANEL
+    ============================================================ */
     const panel = document.createElement('div');
     panel.className = PANEL_CLASS;
-    panel.style.cssText = `position: fixed; bottom: 24px; right: 24px; background: #ffffff; border-radius: 12px; padding: 14px; width: 200px; font-family: system-ui; box-shadow: 0 12px 28px rgba(0,0,0,0.15); z-index: 999999;`;
+    panel.style.cssText = `
+        position: fixed; bottom: 20px; right: 16px;
+        background: #fff; border-radius: 14px;
+        padding: 14px 16px; width: 210px;
+        font-family: system-ui, sans-serif;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        z-index: 999999; user-select: none;
+    `;
 
     panel.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
-            <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-weight:800;font-size:15px;color:#111;">AR Wallet PRO</span>
+            <span id="sDot2" style="width:10px;height:10px;border-radius:50%;background:#ef4444;transition:background .3s;"></span>
         </div>
-        <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
-            <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
+
+        <input type="number" id="amtInp2" value="1000"
+            style="width:100%;padding:8px;margin-bottom:10px;border:1.5px solid #d1d5db;
+                   border-radius:8px;font-size:15px;text-align:center;font-weight:700;
+                   outline:none;box-sizing:border-box;">
+
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button id="sBtn2"
+                style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:8px;
+                       padding:10px 0;font-size:14px;font-weight:700;cursor:pointer;">Start</button>
+            <button id="tBtn2"
+                style="flex:1;background:#ef4444;color:#fff;border:none;border-radius:8px;
+                       padding:10px 0;font-size:14px;font-weight:700;cursor:pointer;">Stop</button>
         </div>
-        <div id="authStatus" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">
-            ${isAllowedUser ? 'Active' : 'Access Denied'}
+
+        <div id="sMsg2" style="text-align:center;font-size:11.5px;font-weight:600;
+                               color:#6b7280;min-height:16px;">
+            ${isAllowedUser ? '🟢 Ready' : '🔴 Access Denied'}
         </div>
     `;
 
     document.body.appendChild(panel);
-    const amountInput = panel.querySelector('#amtInp');
-    const statusDot = panel.querySelector('#sDot');
-    panel.querySelector('#sBtn').onclick = startFilter;
-    panel.querySelector('#tBtn').onclick = stopFilter;
 
+    const amountInput = panel.querySelector('#amtInp2');
+    const statusDot   = panel.querySelector('#sDot2');
+    const statusMsg   = panel.querySelector('#sMsg2');
+
+    panel.querySelector('#sBtn2').onclick = startBot;
+    panel.querySelector('#tBtn2').onclick = stopBot;
+
+    /* panel visibility */
     setInterval(() => {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         panel.style.display = list ? 'block' : 'none';
-    }, 1000);
+    }, 800);
+
 })();
