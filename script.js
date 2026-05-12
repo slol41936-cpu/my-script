@@ -12,7 +12,6 @@
     ]; 
     
     let isAllowedUser = false;
-
     try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
         const memberId = userInfo?.value?.memberld || userInfo?.value?.memberId;
@@ -57,7 +56,6 @@
                pageText.includes("Submit UTR");
     }
 
-    // আপনার বন্ধুর কোডের মতো "টেনে আনা" বা ফাস্ট ফিল্টার লজিক
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
@@ -81,15 +79,16 @@
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
+                        // ক্লিক করার পর খুব দ্রুত রেজাল্ট চেক (স্পিড বাড়ানো হয়েছে)
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
                                 playNotificationSound(); 
                                 stopFilter(); 
-                            } else if (checkFailure() || running) {
+                            } else {
                                 soundPlayedForThisOrder = false;
-                                startRefresh(); 
+                                if (running) startRefresh(); 
                             }
-                        }, 1800);
+                        }, 800); 
                         return true; 
                     }
                 }
@@ -116,29 +115,24 @@
                 return;
             }
 
-            // ১. আপনার কথা মতো ব্যাঙ্ক অপশনে ক্লিক বন্ধ করা হয়েছে।
-            
-            // ২. লার্জ এবং ডিফল্ট এর মধ্যে ফাস্ট সুইচিং
-            const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
+            const tabs = Array.from(document.querySelectorAll('.van-tab, div, span, p'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-            // যদি ১০০০ না পায় তবেই ট্যাব সুইচ করবে, যাতে বড় অর্ডার না আসে
-            const found = filterAmount();
-            
-            if (!found) {
-                // খুব দ্রুত লার্জ থেকে ডিফল্টে আসা যাওয়া করবে
+            if (!filterAmount()) {
                 if (defaultTab) {
                     defaultTab.click();
+                    // সুইচিং গ্যাপ ১ মিলি-সেকেন্ডের কাছাকাছি নিয়ে আসা হয়েছে
                     setTimeout(() => {
-                        if (largeTab) largeTab.click();
-                    }, 40); // গ্যাপ কমিয়ে দেওয়া হয়েছে
+                        if (largeTab) {
+                            largeTab.click();
+                            filterAmount();
+                        }
+                    }, 10); 
                 }
             }
-
             requestAnimationFrame(filterAmount);
-
-        }, 550); // রিফ্রেশ টাইমিং আরও ফাস্ট করা হয়েছে
+        }, 350); // মেইন সাইকেল টাইমিং আরও টাইট করা হয়েছে
     }
 
     function startFilter() {
@@ -159,7 +153,6 @@
                 }
             }
         });
-
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
@@ -178,7 +171,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet PRO</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
@@ -202,3 +195,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+                                      
