@@ -40,7 +40,7 @@
             setTimeout(() => {
                 sound.pause();
                 sound.currentTime = 0;
-            }, 4000); // মিউজিক একটু বেশিক্ষণ বাজবে যাতে বুঝতে সুবিধা হয়
+            }, 4000); 
         }
     }
 
@@ -51,13 +51,11 @@
         return amountInput.value.trim();
     }
 
-    // অর্ডার ফেল হয়েছে কি না চেক
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
         return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
     }
 
-    // পেমেন্ট পেজ এসেছে কি না চেক (সাউন্ড বাজার আসল জায়গা)
     function isPaymentPagePresent() {
         const pageText = document.body.innerText;
         return pageText.includes("Select Method Payment") || 
@@ -84,20 +82,17 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); // শুধু ক্লিক করবে
+                        buyBtn.click(); 
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // ২.২ সেকেন্ড পর চেক করবে পেমেন্ট পেজ আসলো কি না
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
-                                playNotificationSound(); // পেমেন্ট পেজ পেলেই মিউজিক বাজবে
+                                playNotificationSound(); 
                                 stopFilter(); 
-                            } else if (checkFailure()) {
-                                soundPlayedForThisOrder = false;
-                                if (running) startRefresh(); 
                             } else {
+                                soundPlayedForThisOrder = false;
                                 if (running) startRefresh(); 
                             }
                         }, 2200);
@@ -112,6 +107,7 @@
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
+        // রিফ্রেশ ইন্টারভাল ১.২ সেকেন্ড থেকে কমিয়ে ৪০০ মিলি-সেকেন্ড করা হয়েছে
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -130,16 +126,17 @@
                                Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
             if (currentTab) currentTab.click();
 
+            // ট্যাব সুইচিং ওয়েট টাইম ১২০ms থেকে কমিয়ে ২০ms করা হয়েছে (সুপার ফাস্ট)
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
                 if (largeTab) {
                     largeTab.click();
-                    filterAmount();
                 }
+                // ফিল্টার করার জন্য requestAnimationFrame ব্যবহার করা হয়েছে যাতে কোনো ফ্রেম মিস না হয়
                 requestAnimationFrame(filterAmount);
-            }, 120); 
+            }, 20); 
 
-        }, 1200); 
+        }, 400); 
     }
 
     function startFilter() {
