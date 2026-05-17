@@ -57,7 +57,6 @@
                pageText.includes("Submit UTR");
     }
 
-    // আপনার বন্ধুর কোডের মতো "টেনে আনা" বা ফাস্ট ফিল্টার লজিক
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
@@ -116,29 +115,27 @@
                 return;
             }
 
-            // ১. আপনার কথা মতো ব্যাঙ্ক অপশনে ক্লিক বন্ধ করা হয়েছে।
+            // ওটিপি এর জন্য মেইন ক্যাটাগরি/ব্যাঙ্ক অপশনে ক্লিক করার বাড়তি কোড পুরোপুরি বন্ধ করা হয়েছে।
             
-            // ২. লার্জ এবং ডিফল্ট এর মধ্যে ফাস্ট সুইচিং
+            // শুধু ডিফল্ট এবং লার্জ অপশনে যাওয়ার টাইমিং (৪০ms গ্যাপ) নিখুঁতভাবে মেইনটেইন করা হয়েছে
             const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-            // যদি ১০০০ না পায় তবেই ট্যাব সুইচ করবে, যাতে বড় অর্ডার না আসে
             const found = filterAmount();
             
             if (!found) {
-                // খুব দ্রুত লার্জ থেকে ডিফল্টে আসা যাওয়া করবে
                 if (defaultTab) {
                     defaultTab.click();
                     setTimeout(() => {
                         if (largeTab) largeTab.click();
-                    }, 40); // গ্যাপ কমিয়ে দেওয়া হয়েছে
+                    }, 40); // আপনার চেনা সেই ৪০ms গ্যাপ
                 }
             }
 
             requestAnimationFrame(filterAmount);
 
-        }, 550); // রিফ্রেশ টাইমিং আরও ফাস্ট করা হয়েছে
+        }, 550); // চেনা স্পিড টাইমিং
     }
 
     function startFilter() {
@@ -178,7 +175,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR OTP-UPI</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
@@ -202,3 +199,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+    
