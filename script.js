@@ -57,7 +57,6 @@
                pageText.includes("Submit UTR");
     }
 
-    // আপনার বন্ধুর কোডের মতো "টেনে আনা" বা ফাস্ট ফিল্টার লজিক
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return false;
@@ -115,30 +114,29 @@
                 location.reload();
                 return;
             }
-
-            // ১. আপনার কথা মতো ব্যাঙ্ক অপশনে ক্লিক বন্ধ করা হয়েছে।
             
-            // ২. লার্জ এবং ডিফল্ট এর মধ্যে ফাস্ট সুইচিং
+            // ফিক্স: নির্দিষ্ট কোনো ট্যাব (যেমন BANK) হার্ডকোড না করে, বর্তমানে যে ট্যাবটি অ্যাক্টিভ (যেমন OTP-UPI বা BANK) সেটিকে ক্লিক করবে
+            const currentTab = document.querySelector('.van-tab--active');
+            if (currentTab) currentTab.click();
+
             const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-            // যদি ১০০০ না পায় তবেই ট্যাব সুইচ করবে, যাতে বড় অর্ডার না আসে
             const found = filterAmount();
             
             if (!found) {
-                // খুব দ্রুত লার্জ থেকে ডিফল্টে আসা যাওয়া করবে
                 if (defaultTab) {
                     defaultTab.click();
                     setTimeout(() => {
                         if (largeTab) largeTab.click();
-                    }, 40); // গ্যাপ কমিয়ে দেওয়া হয়েছে
+                    }, 40); 
                 }
             }
 
             requestAnimationFrame(filterAmount);
 
-        }, 550); // রিফ্রেশ টাইমিং আরও ফাস্ট করা হয়েছে
+        }, 550); 
     }
 
     function startFilter() {
@@ -202,3 +200,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+                            
