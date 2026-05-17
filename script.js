@@ -8,7 +8,14 @@
     const TARGET_CLASS = 'x-buyList-list';
 
     const allowedMembers = [
-        "21248739", "22801760", "24541398", "23631188", "26019413", "21114464", "29021111", "29780075",
+        "21248739",
+        "22801760",
+        "24541398",
+        "23631188",
+        "26019413",
+        "21114464",
+        "29021111",
+        "29780075",
     ]; 
     
     let isAllowedUser = false;
@@ -33,7 +40,7 @@
             setTimeout(() => {
                 sound.pause();
                 sound.currentTime = 0;
-            }, 4000); 
+            }, 4000); // মিউজিক একটু বেশিক্ষণ বাজবে যাতে বুঝতে সুবিধা হয়
         }
     }
 
@@ -44,11 +51,13 @@
         return amountInput.value.trim();
     }
 
+    // অর্ডার ফেল হয়েছে কি না চেক
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
         return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
     }
 
+    // পেমেন্ট পেজ এসেছে কি না চেক (সাউন্ড বাজার আসল জায়গা)
     function isPaymentPagePresent() {
         const pageText = document.body.innerText;
         return pageText.includes("Select Method Payment") || 
@@ -59,7 +68,7 @@
 
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
-        if (!list || !running) return false;
+        if (!list || !running) return;
 
         const allowed = getAllowedAmount();
         const orders = list.children;
@@ -75,26 +84,28 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); 
+                        buyBtn.click(); // শুধু ক্লিক করবে
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
+                        // ২.২ সেকেন্ড পর চেক করবে পেমেন্ট পেজ আসলো কি না
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
-                                playNotificationSound(); 
+                                playNotificationSound(); // পেমেন্ট পেজ পেলেই মিউজিক বাজবে
                                 stopFilter(); 
-                            } else if (checkFailure() || running) {
+                            } else if (checkFailure()) {
                                 soundPlayedForThisOrder = false;
-                                startRefresh(); 
+                                if (running) startRefresh(); 
+                            } else {
+                                if (running) startRefresh(); 
                             }
-                        }, 1800);
-                        return true; 
+                        }, 2200);
+                        return; 
                     }
                 }
             }
         }
-        return false;
     }
 
     function startRefresh() {
@@ -115,27 +126,20 @@
                 return;
             }
 
-            // ওটিপি এর জন্য মেইন ক্যাটাগরি/ব্যাঙ্ক অপশনে ক্লিক করার বাড়তি কোড পুরোপুরি বন্ধ করা হয়েছে।
-            
-            // শুধু ডিফল্ট এবং লার্জ অপশনে যাওয়ার টাইমিং (৪০ms গ্যাপ) নিখুঁতভাবে মেইনটেইন করা হয়েছে
-            const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
-            const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
-            const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
+            const currentTab = document.querySelector('.van-tab--active') || 
+                               Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
+            if (currentTab) currentTab.click();
 
-            const found = filterAmount();
-            
-            if (!found) {
-                if (defaultTab) {
-                    defaultTab.click();
-                    setTimeout(() => {
-                        if (largeTab) largeTab.click();
-                    }, 40); // আপনার চেনা সেই ৪০ms গ্যাপ
+            setTimeout(() => {
+                const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
+                if (largeTab) {
+                    largeTab.click();
+                    filterAmount();
                 }
-            }
+                requestAnimationFrame(filterAmount);
+            }, 120); 
 
-            requestAnimationFrame(filterAmount);
-
-        }, 550); // চেনা স্পিড টাইমিং
+        }, 1200); 
     }
 
     function startFilter() {
@@ -175,12 +179,12 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR OTP-UPI</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button id="sBtn" style="flex: 1; background: #22c55e; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Start</button>
+            <button id="sBtn" style="flex: 1; background: ${isAllowedUser ? '#22c55e' : '#9ca3af'}; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: ${isAllowedUser ? 'pointer' : 'not-allowed'}; font-weight: bold;">Start</button>
             <button id="tBtn" style="flex: 1; background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; cursor: pointer; font-weight: bold;">Stop</button>
         </div>
         <div id="authStatus" style="text-align: center; font-size: 12px; font-weight: 600; color: ${isAllowedUser ? '#22c55e' : '#ef4444'};">
@@ -199,4 +203,3 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
-    
