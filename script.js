@@ -40,7 +40,7 @@
             setTimeout(() => {
                 sound.pause();
                 sound.currentTime = 0;
-            }, 4000); // মিউজিক একটু বেশিক্ষণ বাজবে যাতে বুঝতে সুবিধা হয়
+            }, 4000); 
         }
     }
 
@@ -51,13 +51,11 @@
         return amountInput.value.trim();
     }
 
-    // অর্ডার ফেল হয়েছে কি না চেক
     function checkFailure() {
         const pageText = document.body.innerText.toLowerCase();
         return pageText.includes("someone else") || pageText.includes("bought by") || pageText.includes("already taken") || pageText.includes("failed");
     }
 
-    // পেমেন্ট পেজ এসেছে কি না চেক (সাউন্ড বাজার আসল জায়গা)
     function isPaymentPagePresent() {
         const pageText = document.body.innerText;
         return pageText.includes("Select Method Payment") || 
@@ -84,15 +82,14 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); // শুধু ক্লিক করবে
+                        buyBtn.click(); 
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
 
-                        // ২.২ সেকেন্ড পর চেক করবে পেমেন্ট পেজ আসলো কি না
                         setTimeout(() => {
                             if (isPaymentPagePresent()) {
-                                playNotificationSound(); // পেমেন্ট পেজ পেলেই মিউজিক বাজবে
+                                playNotificationSound(); 
                                 stopFilter(); 
                             } else if (checkFailure()) {
                                 soundPlayedForThisOrder = false;
@@ -126,9 +123,7 @@
                 return;
             }
 
-            const currentTab = document.querySelector('.van-tab--active') || 
-                               Array.from(document.querySelectorAll('.van-tab')).find(el => el.innerText.includes('BANK'));
-            if (currentTab) currentTab.click();
+            // আপনার অনুরোধ মেনে মেইন ওটিপি বা ব্যাংক ক্যাটাগরি অপশনটি বারবার রিফ্রেশ করা (currentTab.click) এখান থেকে পুরোপুরি বন্ধ করা হলো।
 
             setTimeout(() => {
                 const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
@@ -137,9 +132,9 @@
                     filterAmount();
                 }
                 requestAnimationFrame(filterAmount);
-            }, 120); 
+            }, 120); // আপনার আসল কোডের ১২০ms টাইম গ্যাপ একদম এক রাখা হয়েছে
 
-        }, 1200); 
+        }, 1200); // আসল কোডের ১২০০ms মেইন রিফ্রেশ টাইম অপরিবর্তিত আছে
     }
 
     function startFilter() {
@@ -203,3 +198,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+ 
