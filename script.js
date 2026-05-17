@@ -82,7 +82,7 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); 
+                        buyBtn.click(); // ১০০০ টাকার অর্ডার দেখামাত্রই সুপারফাস্ট হিট করবে
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
@@ -123,25 +123,26 @@
                 return;
             }
 
-            // ১. ওটিপি বা ব্যাংকের মেইন রিফ্রেশ (currentTab.click) বন্ধ রাখা হয়েছে।
-
-            // ২. আপনার নির্দেশ মতো "Default" এবং "Large" এর ভেতরের অটোমেটিক রিফ্রেশ ব্যবস্থা সফলভাবে চালু করা হলো
+            // মেইন ক্যাটাগরি ক্লিক বন্ধ থাকবে লোডিং এড়াতে।
+            // কিন্তু আপনার কথা মতো Default এবং Large এর ফাস্ট রিফ্রেশ সুইচিং পুরোপুরি চালু করা হলো।
             const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
             const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
             const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
             if (defaultTab) {
-                defaultTab.click();
+                defaultTab.click(); // প্রথমে ডিফল্ট এ ক্লিক করবে
+                
+                // টাইমিং গ্যাপ অপ্টিমাইজ করা হয়েছে যাতে লোডিং আসার আগেই লার্জ-এ সুইচ করে অর্ডার স্ক্যান করতে পারে
                 setTimeout(() => {
                     if (largeTab) {
                         largeTab.click();
                         filterAmount();
                     }
                     requestAnimationFrame(filterAmount);
-                }, 120); // আপনার আসল কোডের নিখুঁত ১২০ms টাইম গ্যাপ
+                }, 90); // টাইমিং নিখুঁত ব্যালেন্সে আনা হয়েছে (৯0ms)
             }
 
-        }, 1200); // আসল কোডের ১২০০ms মেইন ইন্টারভাল টাইম
+        }, 1100); // মেইন লুপ স্পিড একটু বাড়িয়ে ১১০০ms করা হয়েছে যাতে সার্ভার থেকে ফাস্ট ডেটা টানে
     }
 
     function startFilter() {
@@ -158,7 +159,7 @@
                     playNotificationSound();
                     stopFilter();
                 } else {
-                    filterAmount();
+                    filterAmount(); // স্ক্রিনে কোনো ডেটা ফ্লিকার করলেই ০ মিলি-সেকেন্ডে ফিল্টার করবে
                 }
             }
         });
@@ -181,7 +182,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Turbo Filter</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
@@ -205,3 +206,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
+            
