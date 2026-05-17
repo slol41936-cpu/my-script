@@ -64,7 +64,6 @@
                pageText.includes("Submit UTR");
     }
 
-    // সুপার ফাস্ট ফিল্টার লজিক - চোখের পলকে ক্লিক করার জন্য
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
@@ -83,7 +82,7 @@
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
                     if (buyBtn && running) {
-                        buyBtn.click(); // ১০০০ টাকার অর্ডার পেলেই সাথে সাথে হিট করবে
+                        buyBtn.click(); 
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
@@ -124,12 +123,25 @@
                 return;
             }
 
-            // ফিক্স: ওটিপিতে লোডিং স্ক্রিন এড়াতে Default/Large এবং ক্যাটাগরির সমস্ত রিফ্রেশ ক্লিক বন্ধ।
-            // পেজ যেহেতু নিজে স্ক্রল হচ্ছে, তাই স্ক্রিপ্ট শুধু ব্যাকগ্রাউন্ডে রেডি থাকবে।
-            filterAmount();
-            requestAnimationFrame(filterAmount);
+            // ১. ওটিপি বা ব্যাংকের মেইন রিফ্রেশ (currentTab.click) বন্ধ রাখা হয়েছে।
 
-        }, 1200); // আসল কোডের ১২০০ms টাইমিং অক্ষুণ্ন রাখা হয়েছে
+            // ২. আপনার নির্দেশ মতো "Default" এবং "Large" এর ভেতরের অটোমেটিক রিফ্রেশ ব্যবস্থা সফলভাবে চালু করা হলো
+            const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
+            const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
+            const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
+
+            if (defaultTab) {
+                defaultTab.click();
+                setTimeout(() => {
+                    if (largeTab) {
+                        largeTab.click();
+                        filterAmount();
+                    }
+                    requestAnimationFrame(filterAmount);
+                }, 120); // আপনার আসল কোডের নিখুঁত ১২০ms টাইম গ্যাপ
+            }
+
+        }, 1200); // আসল কোডের ১২০০ms মেইন ইন্টারভাল টাইম
     }
 
     function startFilter() {
@@ -137,18 +149,16 @@
         running = true;
         soundPlayedForThisOrder = false;
         statusDot.style.background = '#22c55e';
-        
         filterAmount();
         startRefresh(); 
 
-        // এই MutationObserver-টি ওটিপি পেজের অটোমেটিক স্ক্রল হওয়ার সাথে সাথে নতুন ১০০০ টাকার অর্ডার ডিটেক্ট করবে
         observer = new MutationObserver(() => {
             if (running) {
                 if (isPaymentPagePresent()) {
                     playNotificationSound();
                     stopFilter();
                 } else {
-                    filterAmount(); // স্ক্রিনে ডেটা চেঞ্জ হওয়া মাত্রই ফিল্টার রান হবে (০ মিলি-সেকেন্ড ল্যাগ)
+                    filterAmount();
                 }
             }
         });
@@ -171,7 +181,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR OTP-UPI Live</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
