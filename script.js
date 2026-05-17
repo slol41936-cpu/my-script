@@ -205,4 +205,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
- 
+                
