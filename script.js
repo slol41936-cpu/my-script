@@ -101,6 +101,7 @@
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
+        // টাইমিং একদম আপনার আগের মতো নিখুঁত ৫৫0ms এ ফেরত আনা হয়েছে
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -115,7 +116,7 @@
                 return;
             }
             
-            // ফিক্স: নির্দিষ্ট কোনো ট্যাব (যেমন BANK) হার্ডকোড না করে, বর্তমানে যে ট্যাবটি অ্যাক্টিভ (যেমন OTP-UPI বা BANK) সেটিকে ক্লিক করবে
+            // আপনি বর্তমানে যে ক্যাটাগরিতে (BANK বা OTP-UPI) থাকবেন ওখানেই রিফ্রেশ হবে
             const currentTab = document.querySelector('.van-tab--active');
             if (currentTab) currentTab.click();
 
@@ -128,6 +129,7 @@
             if (!found) {
                 if (defaultTab) {
                     defaultTab.click();
+                    // গ্যাপ আবার আপনার আগের মতো ঠিক ৪০ms করা হয়েছে
                     setTimeout(() => {
                         if (largeTab) largeTab.click();
                     }, 40); 
@@ -200,4 +202,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
-                            
+            
