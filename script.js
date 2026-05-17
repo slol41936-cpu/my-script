@@ -123,18 +123,25 @@
                 return;
             }
 
-            // আপনার অনুরোধ মেনে মেইন ওটিপি বা ব্যাংক ক্যাটাগরি অপশনটি বারবার রিফ্রেশ করা (currentTab.click) এখান থেকে পুরোপুরি বন্ধ করা হলো।
+            // ১. ওটিপি বা ব্যাংকের মেইন রিফ্রেশ (currentTab.click) বন্ধ রাখা হয়েছে।
 
-            setTimeout(() => {
-                const largeTab = Array.from(document.querySelectorAll('div, span, p')).find(el => el.innerText && el.innerText.trim() === 'Large');
-                if (largeTab) {
-                    largeTab.click();
-                    filterAmount();
-                }
-                requestAnimationFrame(filterAmount);
-            }, 120); // আপনার আসল কোডের ১২০ms টাইম গ্যাপ একদম এক রাখা হয়েছে
+            // ২. আপনার নির্দেশ মতো "Default" এবং "Large" এর ভেতরের অটোমেটিক রিফ্রেশ ব্যবস্থা সফলভাবে চালু করা হলো
+            const tabs = Array.from(document.querySelectorAll('div, span, p, .van-tab'));
+            const defaultTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Default');
+            const largeTab = tabs.find(el => el.innerText && el.innerText.trim() === 'Large');
 
-        }, 1200); // আসল কোডের ১২০০ms মেইন রিফ্রেশ টাইম অপরিবর্তিত আছে
+            if (defaultTab) {
+                defaultTab.click();
+                setTimeout(() => {
+                    if (largeTab) {
+                        largeTab.click();
+                        filterAmount();
+                    }
+                    requestAnimationFrame(filterAmount);
+                }, 120); // আপনার আসল কোডের নিখুঁত ১২০ms টাইম গ্যাপ
+            }
+
+        }, 1200); // আসল কোডের ১২০০ms মেইন ইন্টারভাল টাইম
     }
 
     function startFilter() {
@@ -198,4 +205,4 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
- 
+                                
