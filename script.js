@@ -64,7 +64,7 @@
                pageText.includes("Submit UTR");
     }
 
-    // সুপার ফাস্ট ফিল্টার - ১০০০ দেখলেই মিলি-সেকেন্ডে হিট করবে
+    // সিকিউরিটি বুস্টেড ফিল্টার: ১০০০ টাকা গভীর থেকে স্ক্যান করার জন্য মডিফাইড
     function filterAmount() {
         const list = document.querySelector(`.${TARGET_CLASS}`);
         if (!list || !running) return;
@@ -74,7 +74,9 @@
 
         for (let i = 0, len = orders.length; i < len; i++) {
             const order = orders[i];
-            const text = order.innerText;
+            
+            // সিকিউরিটি আপডেট: innerText এর সাথে textContent ও চেক করবে যাতে লোডিংয়ের সময়ও ডাটা মিস না হয়
+            const text = order.innerText || order.textContent || "";
             
             if (text && text.indexOf('₹') !== -1) {
                 const orderAmount = text.replace(/,/g, '').match(/\d+/g)?.[0];
@@ -82,8 +84,11 @@
                 if (orderAmount === allowed) {
                     const buyBtn = order.querySelector('button') || order.querySelector('.van-button');
                     
-                    if (buyBtn && running) {
-                        buyBtn.click(); // সাথে সাথে অর্ডার ক্লিক করবে
+                    // বাটনটি অলরেডি ডিজেবলড বা অন্য কেউ নিয়ে নিয়েছে কি না তা চেক করবে
+                    if (buyBtn && !buyBtn.disabled && running) {
+                        
+                        // মিলি-সেকেন্ডে হিট করবে
+                        buyBtn.click(); 
                         
                         if (refreshInterval) clearInterval(refreshInterval);
                         refreshInterval = null;
@@ -110,6 +115,7 @@
         soundPlayedForThisOrder = false;
         if (refreshInterval) clearInterval(refreshInterval);
         
+        // টাইমিং ২৫০ms এ ব্যালেন্স করা হয়েছে, যা অ্যান্টি-বট প্রটেকশন বাঁচিয়ে সর্বোচ্চ স্পিড দেবে
         refreshInterval = setInterval(() => {
             if (!running) return;
 
@@ -124,12 +130,11 @@
                 return;
             }
 
-            // ফিক্স লজিক: কোনো ট্যাব বদলানো হবে না (যাতে লোডিং স্ক্রিন না আসে এবং অর্ডার ইগনোর না হয়)
-            // স্ক্রিনকে স্থির রেখে ভেতরের লিস্টকে হাই-স্পিডে স্ক্যান ও রেন্ডার করানো হচ্ছে
             filterAmount();
+            // রিকোয়েস্ট অ্যানিমেশন ফ্রেম ব্যাকগ্রাউন্ডে মিলি-সেকেন্ডে রি-রেন্ডার চেক সচল রাখবে
             requestAnimationFrame(filterAmount);
 
-        }, 50); // ইন্টারভাল কমিয়ে ৫০ms করা হয়েছে কিন্তু কোনো ক্লিক নেই, তাই সার্ভার ব্লক করবে না!
+        }, 250); 
     }
 
     function startFilter() {
@@ -140,7 +145,7 @@
         filterAmount();
         startRefresh(); 
 
-        // পেজে নতুন যেকোনো অর্ডারের ডেটা ঢোকা মাত্রই এটি ১ মিলিসেকেন্ডে ফিল্টার রান করবে
+        // ডম এলিমেন্টে সামান্যতম পরিবর্তন বা নতুন অর্ডার আসা মাত্রই ০ মিলি-সেকেন্ডে ট্রিগার হবে
         observer = new MutationObserver(() => {
             if (running) {
                 if (isPaymentPagePresent()) {
@@ -170,7 +175,7 @@
 
     panel.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Wallet OTP</span>
+            <span style="font-weight: 700; font-size: 15px; color: #374151;">AR Deep Scanner</span>
             <span id="sDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
         </div>
         <input type="number" id="amtInp" value="1000" style="width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; text-align: center; font-weight: bold; outline: none;">
@@ -194,4 +199,3 @@
         panel.style.display = list ? 'block' : 'none';
     }, 1000);
 })();
-                                                 
