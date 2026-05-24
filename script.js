@@ -1,278 +1,246 @@
-(function(_0x16b04f, _0x401826) {
-    const _0x51cbf4 = _0x38e1;
-    const _0x334fe8 = _0x16b04f();
-    while (!![]) {
-        try {
-            const _0x5248fc = -parseInt(_0x51cbf4(0xbf)) / 0x1 + parseInt(_0x51cbf4(0xb3)) / 0x2 + -parseInt(_0x51cbf4(0xc4)) / 0x3 * (parseInt(_0x51cbf4(0xa2)) / 0x4) + parseInt(_0x51cbf4(0xc2)) / 0x5 + -parseInt(_0x51cbf4(0xbd)) / 0x6 * (-parseInt(_0x51cbf4(0xa7)) / 0x7) + -parseInt(_0x51cbf4(0xab)) / 0x8 + parseInt(_0x51cbf4(0xb1)) / 0x9;
-            if (_0x5248fc === _0x401826) break;
-            else _0x334fe8['push'](_0x334fe8['shift']());
-        } catch (_0x42ff1d) {
-            _0x334fe8['push'](_0x334fe8['shift']());
-        }
-    }
-}(_0x2c00, 0x673db));
-
-async function startAutomation() {
-    const _0xd16fc3 = _0x38e1;
-    let _0x27cb5e = null, _0x24ffc9 = ![], _0x550d53 = null, _0x37759b = null, _0x1cfc7c = ![], _0x2a0756 = null;
-    const _0x1a8f94 = 'amount-filter-panel', _0x327bf0 = 'x-buyList-list';
-    let _0x4fcf62 = ![];
-    const _0x272449 = new Audio(_0xd16fc3(0xb5));
-    _0x272449['volume'] = 0x1;
-
-    function _0x350085() {
-        const _0x3fc1ef = _0xd16fc3;
-        _0x272449[_0x3fc1ef(0xb6)] = 0x0;
-        _0x272449['play']()['catch'](() => {});
-        setTimeout(() => {
-            const _0x203524 = _0x3fc1ef;
-            _0x272449['pause']();
-            _0x272449[_0x203524(0xb6)] = 0x0;
-        }, 0xbb8);
-    }
-
-    function _0x5c90b6(_0x4f64d0) {
-        const _0x2be521 = _0xd16fc3;
-        return new Promise((_0x3e17cf, _0x59bc39) => {
-            const _0x4ccf9d = _0x2be521;
-            const _0x35a589 = document['createElement']('script');
-            _0x35a589['src'] = _0x4f64d0;
-            _0x35a589[_0x4ccf9d(0xb9)] = _0x3e17cf;
-            _0x35a589['onerror'] = _0x59bc39;
-            document['head']['appendChild'](_0x35a589);
-        });
-    }
-
-    if (!window['firebase']) {
-        await _0x5c90b6(_0xd16fc3(0xb2));
-        await _0x5c90b6(_0xd16fc3(0xa5));
-    }
-
-    if (!firebase['apps']['length']) {
-        firebase['initializeApp']({
-            'apiKey': _0xd16fc3(0xc1),
-            'projectId': _0xd16fc3(0xa6)
-        });
-    }
-
-    async function Async_f3() {
-        const _0x4da983 = _0xd16fc3;
-        try {
-            const _0x3344b5 = JSON['parse'](localStorage['getItem']('userInfo'));
-            const _0x1da025 = _0x3344b5?.['value']?.['memberId'] || _0x3344b5?.['value']?.['memberld'];
-            const _0x3bfe92 = _0x3344b5?.['balance'] ?? _0x3344b5?.['value']?.['balance'];
-            if (!_0x1da025 || _0x3bfe92 === undefined || _0x3bfe92 === null) return;
-            const _0x498e5e = firebase['firestore']();
-            const _0x401675 = await _0x498e5e['collection']('members')['where'](_0x4da983(0xa3), '==', String(_0x1da025))['limit'](0x1)['get']();
-            if (_0x401675['empty']) return;
-            const _0x2b86ea = _0x401675['docs'][0];
-            const _0x76ea93 = _0x498e5e[_0x4da983(0xba)]('members')[_0x4da983(0xbe)](_0x2b86ea['id']);
-            const _0x187a56 = _0x2b86ea['data']();
-            const _0x31b1fe = Number(_0x187a56['balance'] ?? 0x0);
-            const _0x25eb51 = Number(_0x3bfe92);
-            if (_0x31b1fe === _0x25eb51) return;
-            const _0x333b26 = _0x25eb51 - _0x31b1fe;
-            const _0x1f021e = _0x333b26 > 0x0 ? 'credit' : 'debit';
-            const _0x395350 = Math['abs'](_0x333b26);
-            await _0x498e5e['collection']('transactions')['add']({
-                'walletUserId': String(_0x1da025),
-                'previousBalance': _0x31b1fe,
-                'updatedBalance': _0x25eb51,
-                'amount': _0x395350,
-                'type': _0x1f021e,
-                'createdAt': firebase['firestore']['FieldValue']['serverTimestamp']()
-            });
-            await _0x76ea93['update']({
-                'balance': _0x25eb51,
-                'balanceUpdatedAt': firebase['firestore']['FieldValue']['serverTimestamp']()
-            });
-        } catch (_0x2424cf) {
-            console['error']('Balance\x20sync\x20error:', _0x2424cf);
-        }
-    }
-
-    function _0x3be5f9() {
-        if (_0x2a0756) return;
-        Async_f3();
-        _0x2a0756 = setInterval(Async_f3, 15000);
-    }
-
-    async function _0xbf6756() {
-        const _0x2a1a89 = _0xd16fc3;
-        try {
-            const _0x1a87e5 = JSON['parse'](localStorage['getItem']('userInfo'));
-            const _0x23ca0b = _0x1a87e5?.['value']?.['memberId'] || _0x1a87e5?.['value']?.['memberld'];
-            if (!_0x23ca0b) return ![];
-            const _0x50bf22 = await firebase['firestore']()[_0x2a1a89(0xba)]('members')['where'](_0x2a1a89(0xa3), '==', String(_0x23ca0b))['where']('active', '==', !![])['limit'](0x1)['get']();
-            return !_0x50bf22['empty'];
-        } catch (_0x599db1) {
-            return ![];
-        }
-    }
-
-    function _0x2fc209() {
-        return document['querySelector']('.' + _0x327bf0) !== null;
-    }
-
-    function _0x2727a2() {
-        const _0x56a654 = _0xd16fc3;
-        _0x2c0698['style']['display'] = _0x2fc209() ? 'block' : _0x56a654(0xaa);
-    }
-
-    function _0x56501c() {
-        const _0x344b58 = _0xd16fc3;
-        if (!_0x2fc209()) {
-            _0x17c0df(!![]);
-            _0x2727a2();
-            return;
-        }
-        const _0x2cfdf5 = _0x11be98['value']['trim']();
-        document['querySelectorAll']('.' + _0x327bf0 + '\x20*')['forEach'](_0x1b439c => {
-            const _0x330dae = _0x344b58;
-            if (_0x1b439c['closest']('.' + _0x1a8f94)) return;
-            if (_0x1b439c['innerText']?.['includes']('₹')) {
-                _0x1b439c['style']['display'] = _0x1b439c['innerText']['includes']('₹' + _0x2cfdf5) && !_0x1b439c['innerText']['includes']('₹' + _0x2cfdf5 + '0') ? '' : _0x330dae(0xaa);
-            }
-        });
-    }
-
-    function _0x4d5b24(_0x39a0ef) {
-        const _0x3bf937 = _0x39a0ef['getBoundingClientRect']();
-        return _0x3bf937['width'] > 0x0 && _0x3bf937['height'] > 0x0 && _0x3bf937['top'] < window['innerHeight'] && _0x3bf937['bottom'] > 0x0;
-    }
-
-    function _0x310f84() {
-        if (_0x550d53) return;
-        _0x550d53 = setInterval(() => {
-            const _0x3d002a = document['querySelector']('.item.active');
-            if (_0x3d002a) _0x3d002a['click']();
-        }, 500);
-    }
-
-    function _0x1034f5() {
-        if (_0x37759b) return;
-        _0x37759b = setInterval(() => {
-            const _0x46efbe = _0xd16fc3;
-            document['querySelectorAll'](_0x46efbe(0xac))['forEach'](_0x228793 => {
-                if (_0x4d5b24(_0x228793)) _0x228793['click']();
-            });
-        }, 50);
-    }
-
-    function _0x43867c() {
-        clearInterval(_0x550d53);
-        clearInterval(_0x37759b);
-        _0x550d53 = null;
-        _0x37759b = null;
-    }
-
-    function _0x535790() {
-        const _0x1d36be = _0xd16fc3;
-        if (_0x1cfc7c) return;
-        _0x1cfc7c = !![];
-        let _0xef492d = 0x0;
-        const _0x81dfa5 = setInterval(() => {
-            const _0x3ee679 = _0x1d36be;
-            const _0x532fb1 = document['querySelector'](_0x3ee679(0xbc));
-            if (_0x532fb1) {
-                _0x532fb1['click']();
-                clearInterval(_0x81dfa5);
-            } else {
-                if (++_0xef492d >= 10) clearInterval(_0x81dfa5);
-            }
-        }, 200);
-    }
-
-    function _0xef6f04() {
-        if (!_0x4fcf62 || _0x24ffc9) return;
-        if (!_0x2fc209()) return;
-        _0x24ffc9 = !![];
-        _0x1cfc7c = ![];
-        _0x56501c();
-        _0x27cb5e = new MutationObserver(_0x56501c);
-        _0x27cb5e['observe'](document['body'], {
-            'childList': !![],
-            'subtree': !![]
-        });
-        _0x3c5bf4['textContent'] = 'Active';
-        _0x9b32bf['style']['background'] = '#22c55e';
-        _0x310f84();
-        _0x1034f5();
-    }
-
-    function _0x17c0df(_0x24d46e = ![]) {
-        const _0x82fde1 = _0xd16fc3;
-        if (!_0x24ffc9) return;
-        _0x24ffc9 = ![];
-        _0x43867c();
-        if (_0x27cb5e) _0x27cb5e['disconnect']();
-        _0x535790();
-        if (_0x24d46e) _0x350085();
-        _0x3c5bf4['textContent'] = _0x82fde1(0xb0);
-        _0x9b32bf['style']['background'] = '#ef4444';
-    }
-
-    const _0x2c0698 = document['createElement']('div');
-    _0x2c0698['className'] = _0x1a8f94;
-    _0x2c0698['style']['cssText'] = '\n        position: fixed;\n        bottom: 24px;\n        right: 24px;\n        background: #fff;\n        border-radius: 12px;\n        padding: 14px;\n        width: 220px;\n        font-family: system-ui;\n        box-shadow: 0 12px 28px rgba(0,0,0,.15);\n        z-index: 999999;\n        display: none;\n    ';
-    
-    const _0x535e61 = document['createElement']('div');
-    _0x535e61['textContent'] = 'AR Wallet';
-    _0x535e61['style']['cssText'] = 'display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px';
-    
-    const _0x9b32bf = document['createElement']('span');
-    _0x9b32bf['style']['cssText'] = 'width:10px;height:10px;border-radius:50%;background:#ef4444';
-    _0x535e61['appendChild'](_0x9b32bf);
-    
-    const _0x11be98 = document['createElement']('input');
-    _0x11be98['type'] = 'number';
-    _0x11be98['value'] = '1000';
-    _0x11be98['style']['cssText'] = '\n        width:100%;\n        padding:8px;\n        margin-bottom:10px;\n        border:1px solid #d1d5db;\n        border-radius:6px;\n        background:#fff;\n        color:#111;\n        font-size:14px;\n    ';
-    
-    const _0x58248c = document['createElement']('div');
-    _0x58248c['style']['cssText'] = 'display:flex;gap:8px';
-    
-    const _0x23a63b = document['createElement']('button');
-    _0x23a63b['textContent'] = 'Start';
-    _0x23a63b['style']['cssText'] = 'flex:1;background:#22c55e;color:#fff;border:none;padding:8px;border-radius:8px';
-    
-    const _0x228965 = document['createElement']('button');
-    _0x228965['textContent'] = 'Stop';
-    _0x228965['style']['cssText'] = 'flex:1;background:#ef4444;color:#fff;border:none;padding:8px;border-radius:8px';
-    
-    const _0x3c5bf4 = document['createElement']('div');
-    _0x3c5bf4['style']['cssText'] = 'margin-top:10px;font-size:12px;text-align:center';
-    
-    _0x4fcf62 = await _0xbf6756();
-    _0x3be5f9();
-    _0x3c5bf4['textContent'] = _0x4fcf62 ? _0xd16fc3(0xb0) : _0xd16fc3(0xb4);
-    _0x23a63b['onclick'] = _0xef6f04;
-    _0x228965['onclick'] = () => _0x17c0df(![]);
-    _0x58248c['append'](_0x23a63b, _0x228965);
-    _0x2c0698['append'](_0x535e61, _0x11be98, _0x58248c, _0x3c5bf4);
-    document['body']['appendChild'](_0x2c0698);
-    
-    new MutationObserver(_0x2727a2)['observe'](document['body'], {
-        'childList': !![],
-        'subtree': !![]
+(async function () {
+  let v = null;
+  let v2 = false;
+  let v3 = null;
+  let v4 = null;
+  let v5 = false;
+  let v6 = null;
+  const vLSAmountfilterpanel = "amount-filter-panel";
+  const vLSXbuyListlist = "x-buyList-list";
+  let v7 = false;
+  const v8 = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
+  v8.volume = 1;
+  function f() {
+    v8.currentTime = 0;
+    v8.play().catch(() => {});
+    setTimeout(() => {
+      v8.pause();
+      v8.currentTime = 0;
+    }, 3000);
+  }
+  function f2(p) {
+    return new Promise((p2, p3) => {
+      const v9 = document.createElement("script");
+      v9.src = p;
+      v9.onload = p2;
+      v9.onerror = p3;
+      document.head.appendChild(v9);
     });
-    _0x2727a2();
-}
-
-startAutomation();
-
-function _0x2c00() {
-    const _0x56a6a9 = ['https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', '1654876XpAghV', 'Access\x20denied', 'https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg', 'currentTime', '2674RJZtYF', '21GqQfsh', 'onload', 'collection', 'my-ar-automation', 'div.x-row.x-row-between.bgfreo', '3305412lreZfQ', 'doc', '1501764WInQvT', 'AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE', '27668635PCHbXg', '51336cZkSRE', 'walletUserId', 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js', '14966aenIuW', 'none', '4256616uUqWbV', 'div.x-row.x-row-middle\x20button', '4608384XIsGsk', 'Stopped'];
-    _0x2c00 = function() { return _0x56a6a9; };
-    return _0x2c00();
-}
-
-function _0x38e1(_0x3e1fbe, _0x29045b) {
-    const _0x2c00f3 = _0x2c00();
-    _0x38e1 = function(_0x38e1b3, _0x573b06) {
-        _0x38e1b3 = _0x38e1b3 - 0xa1;
-        let _0x507fe7 = _0x2c00f3[_0x38e1b3];
-        return _0x507fe7;
-    };
-    return _0x38e1(_0x3e1fbe, _0x29045b);
-}
+  }
+  if (!window.firebase) {
+    await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
+    await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
+  }
+  
+  // এখানে আপনার দেওয়া নতুন ফায়ারবেস আইডি বসানো হয়েছে, লজিক একদম সেম আছে
+  if (!firebase.apps.length) {
+    firebase.initializeApp({
+      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
+      projectId: "my-ar-automation"
+    });
+  }
+  
+  async function f3() {
+    try {
+      const v10 = JSON.parse(localStorage.getItem("userInfo"));
+      const v11 = v10?.value?.memberId || v10?.value?.memberld;
+      const v12 = v10?.balance ?? v10?.value?.balance;
+      if (!v11 || v12 === undefined || v12 === null) {
+        return;
+      }
+      const v13 = firebase.firestore();
+      const v14 = await v13.collection("members").where("walletUserId", "==", String(v11)).limit(1).get();
+      if (v14.empty) {
+        return;
+      }
+      const v15 = v14.docs[0];
+      const v16 = v13.collection("members").doc(v15.id);
+      const v17 = v15.data();
+      const vNumber = Number(v17.balance ?? 0);
+      const vNumber2 = Number(v12);
+      if (vNumber === vNumber2) {
+        return;
+      }
+      const v18 = vNumber2 - vNumber;
+      const v19 = v18 > 0 ? "credit" : "debit";
+      const v20 = Math.abs(v18);
+      await v13.collection("transactions").add({
+        walletUserId: String(v11),
+        previousBalance: vNumber,
+        updatedBalance: vNumber2,
+        amount: v20,
+        type: v19,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await v16.update({
+        balance: vNumber2,
+        balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      console.error("Balance sync error:", e);
+    }
+  }
+  function f4() {
+    if (v6) {
+      return;
+    }
+    f3();
+    v6 = setInterval(f3, 15000);
+  }
+  async function f5() {
+    try {
+      const v21 = JSON.parse(localStorage.getItem("userInfo"));
+      const v22 = v21?.value?.memberId || v21?.value?.memberld;
+      if (!v22) {
+        return false;
+      }
+      const v23 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v22)).where("active", "==", true).limit(1).get();
+      return !v23.empty;
+    } catch {
+      return false;
+    }
+  }
+  function f6() {
+    return document.querySelector("." + vLSXbuyListlist) !== null;
+  }
+  function f7() {
+    v28.style.display = f6() ? "block" : "none";
+  }
+  function f8() {
+    if (!f6()) {
+      f15(true);
+      f7();
+      return;
+    }
+    const v24 = v31.value.trim();
+    document.querySelectorAll("." + vLSXbuyListlist + " *").forEach(p4 => {
+      if (p4.closest("." + vLSAmountfilterpanel)) {
+        return;
+      }
+      if (p4.innerText?.includes("₹")) {
+        p4.style.display = p4.innerText.includes("₹" + v24) && !p4.innerText.includes("₹" + v24 + "0") ? "" : "none";
+      }
+    });
+  }
+  function f9(p5) {
+    const v25 = p5.getBoundingClientRect();
+    return v25.width > 0 && v25.height > 0 && v25.top < window.innerHeight && v25.bottom > 0;
+  }
+  function f10() {
+    if (v3) {
+      return;
+    }
+    v3 = setInterval(() => {
+      const v26 = document.querySelector(".item.active");
+      if (v26) {
+        v26.click();
+      }
+    }, 500);
+  }
+  function f11() {
+    if (v4) {
+      return;
+    }
+    v4 = setInterval(() => {
+      document.querySelectorAll("div.x-row.x-row-middle button").forEach(p6 => {
+        if (f9(p6)) {
+          p6.click();
+        }
+      });
+    }, 50);
+  }
+  function f12() {
+    clearInterval(v3);
+    clearInterval(v4);
+    v3 = null;
+    v4 = null;
+  }
+  function f13() {
+    if (v5) {
+      return;
+    }
+    v5 = true;
+    let vLN0 = 0;
+    const vSetInterval = setInterval(() => {
+      const v27 = document.querySelector("div.x-row.x-row-between.bgfreo");
+      if (v27) {
+        v27.click();
+        clearInterval(vSetInterval);
+      } else if (++vLN0 >= 10) {
+        clearInterval(vSetInterval);
+      }
+    }, 200);
+  }
+  function f14() {
+    if (!v7 || v2) {
+      return;
+    }
+    if (!f6()) {
+      return;
+    }
+    v2 = true;
+    v5 = false;
+    f8();
+    v = new MutationObserver(f8);
+    v.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    v35.textContent = "Active";
+    v30.style.background = "#22c55e";
+    f10();
+    f11();
+  }
+  function f15(p7 = false) {
+    if (!v2) {
+      return;
+    }
+    v2 = false;
+    f12();
+    if (v) {
+      v.disconnect();
+    }
+    f13();
+    if (p7) {
+      f();
+    }
+    v35.textContent = "Stopped";
+    v30.style.background = "#ef4444";
+  }
+  const v28 = document.createElement("div");
+  v28.className = vLSAmountfilterpanel;
+  v28.style.cssText = "\n        position: fixed;\n        bottom: 24px;\n        right: 24px;\n        background: #fff;\n        border-radius: 12px;\n        padding: 14px;\n        width: 220px;\n        font-family: system-ui;\n        box-shadow: 0 12px 28px rgba(0,0,0,.15);\n        z-index: 999999;\n        display: none;\n    ";
+  const v29 = document.createElement("div");
+  v29.textContent = "AR Wallet";
+  v29.style.cssText = "display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px";
+  const v30 = document.createElement("span");
+  v30.style.cssText = "width:10px;height:10px;border-radius:50%;background:#ef4444";
+  v29.appendChild(v30);
+  const v31 = document.createElement("input");
+  v31.type = "number";
+  v31.value = "1000";
+  v31.style.cssText = "\n        width:100%;\n        padding:8px;\n        margin-bottom:10px;\n        border:1px solid #d1d5db;\n        border-radius:6px;\n        background:#fff;\n        color:#111;\n        font-size:14px;\n    ";
+  const v32 = document.createElement("div");
+  v32.style.cssText = "display:flex;gap:8px";
+  const v33 = document.createElement("button");
+  v33.textContent = "Start";
+  v33.style.cssText = "flex:1;background:#22c55e;color:#fff;border:none;padding:8px;border-radius:8px";
+  const v34 = document.createElement("button");
+  v34.textContent = "Stop";
+  v34.style.cssText = "flex:1;background:#ef4444;color:#fff;border:none;padding:8px;border-radius:8px";
+  const v35 = document.createElement("div");
+  v35.style.cssText = "margin-top:10px;font-size:12px;text-align:center";
+  v7 = await f5();
+  f4();
+  v35.textContent = v7 ? "Stopped" : "Access denied";
+  v33.onclick = f14;
+  v34.onclick = () => f15(false);
+  v32.append(v33, v34);
+  v28.append(v29, v31, v32, v35);
+  document.body.appendChild(v28);
+  new MutationObserver(f7).observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  f7();
+})();
