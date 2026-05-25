@@ -8,8 +8,8 @@
   const vLSAmountfilterpanel = "amount-filter-panel";
   const vLSXbuyListlist = "x-buyList-list";
   let v7 = false;
-  const v8 = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
-  v8.volume = 1;
+  const v8 = new Audio("https://raw.githubusercontent.com/slol41936-cpu/my-script/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3");
+
   function f() {
     v8.currentTime = 0;
     v8.play().catch(() => {});
