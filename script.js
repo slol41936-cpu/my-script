@@ -75,8 +75,8 @@
   }
   if (!firebase.apps.length) {
     firebase.initializeApp({
-      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-      projectId: "my-ar-automation"
+      apiKey: "AIzaSyCI7WjTsCfYrFU0U38y84PvSE1ysoOmc68",
+      projectId: "wallet-automation-a59da"
     });
   }
   let v15 = null;
@@ -217,7 +217,7 @@
                 platformOrder: v27.platformOrder,
                 payType: v27.payType,
                 orderType: v27.orderType,
-                buyBankCode: "moneyView",
+                buyBankCode: "freeCharge",
                 buyerKycId: ""
               })
             });
@@ -298,4 +298,4 @@
     }
   }
 })();
-        
+    
