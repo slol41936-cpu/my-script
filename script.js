@@ -1,12 +1,12 @@
 (async function () {
   const v = document.createElement("style");
-  v.innerHTML = "\n    #cyberPanel{ \n        position:fixed; \n        right:20px; \n        bottom:20px; \n        width:280px; \n        z-index:999999; \n        background:linear-gradient(135deg, rgba(10, 25, 18, 0.95), rgba(15, 40, 25, 0.95)); \n        border:1px solid rgba(0, 255, 149, 0.4); \n        border-radius:18px; \n        backdrop-filter:blur(20px); \n        box-shadow: \n            0 10px 40px rgba(0, 0, 0, 0.7),\n            0 0 20px rgba(0, 255, 149, 0.25); \n        overflow:hidden; \n        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; \n    } \n    \n    .cyber-header{ \n        padding:12px 15px; \n        background:linear-gradient(90deg, rgba(0, 255, 149, 0.2), rgba(16, 185, 129, 0.2)); \n        color:#00ff95; \n        font-size: 11px;\n        letter-spacing: 1.5px;\n        font-weight:900; \n        text-align:center; \n        cursor:move; \n        border-bottom:1px solid rgba(0, 255, 149, 0.3); \n        user-select:none;\n        text-transform: uppercase;\n        text-shadow: 0 0 10px rgba(0, 255, 149, 0.6);\n    } \n    \n    .cyber-body{ \n        padding:16px; \n    } \n    \n    .cyber-label{ \n        color:#a7f3d0; \n        font-size:10px; \n        margin-bottom:6px; \n        display:block; \n        text-transform: uppercase;\n        letter-spacing: 1px;\n        font-weight: 600;\n    } \n    \n    .cyber-input{ \n        width:100%; \n        box-sizing:border-box; \n        padding:9px 12px; \n        background:rgba(10, 30, 20, 0.7); \n        border:1px solid rgba(0, 255, 149, 0.3); \n        border-radius:12px; \n        color:#fff; \n        font-size:14px; \n        outline:none; \n        transition: all 0.3s ease;\n    } \n    \n    .cyber-input:focus{ \n        border-color: #00ff95;\n        box-shadow:0 0 15px rgba(0, 255, 149, 0.4); \n    } \n    \n    .cyber-buttons{ \n        display:flex; \n        gap:10px; \n        margin-top:14px; \n    } \n    \n    .cyber-btn{ \n        flex:1; \n        border:none; \n        padding:9px; \n        border-radius:10px; \n        cursor:pointer; \n        font-size: 11px;\n        font-weight:bold; \n        transition:all .3s ease; \n        text-transform: uppercase;\n        letter-spacing: 1px;\n    } \n    \n    .start-btn{ \n        background:linear-gradient(135deg, #10b981, #00ff95); \n        color:#000; \n        box-shadow: 0 4px 15px rgba(0, 255, 149, 0.4);\n    } \n    \n    .start-btn:hover{ \n        transform:translateY(-2px); \n        box-shadow:0 6px 20px rgba(0, 255, 149, 0.6); \n    } \n    \n    .stop-btn{ \n        background:rgba(239, 68, 68, 0.15); \n        color:#f87171; \n        border: 1px solid rgba(239, 68, 68, 0.4);\n    } \n    \n    .stop-btn:hover{ \n        background:rgba(239, 68, 68, 0.25); \n        transform:translateY(-2px); \n        box-shadow:0 4px 15px rgba(239, 68, 68, 0.3); \n    } \n    \n    .cyber-status{ \n        margin-top:14px; \n        background:rgba(10, 25, 18, 0.8); \n        border-radius:12px; \n        padding:9px 12px; \n        display: flex;\n        align-items: center;\n        justify-content: center;\n        text-align:center; \n        color:#00ff95; \n        font-size:11px; \n        border:1px solid rgba(0, 255, 149, 0.3); \n        min-height: 36px;\n        box-shadow: inset 0 0 10px rgba(0, 255, 149, 0.1);\n        text-transform: uppercase;\n        letter-spacing: 0.5px;\n        font-weight: 600;\n        transition: all 0.3s ease;\n    } \n\n    /* Toggle Switch Styles */\n    .toggle-container {\n        display: flex;\n        background: rgba(10, 30, 20, 0.7);\n        border: 1px solid rgba(0, 255, 149, 0.3);\n        border-radius: 12px;\n        margin-bottom: 12px;\n        padding: 3px;\n        gap: 3px;\n    }\n\n    .toggle-option {\n        flex: 1;\n        padding: 7px;\n        text-align: center;\n        color: #a7f3d0;\n        font-size: 11px;\n        font-weight: bold;\n        cursor: pointer;\n        border-radius: 9px;\n        transition: .3s;\n        user-select: none;\n    }\n\n    .toggle-option.active {\n        background: linear-gradient(135deg, #10b981, #00ff95);\n        color: #000;\n        box-shadow: 0 0 12px rgba(0, 255, 149, 0.5);\n    }\n\n    #overlay-status-container {\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        gap: 15px;\n    }\n\n    #overlay-live-status {\n        font-size: 18px;\n        color: #00ff95;\n        text-transform: uppercase;\n        letter-spacing: 2px;\n        margin-bottom: 5px;\n        text-shadow: 0 0 15px rgba(0, 255, 149, 0.7);\n        font-weight: bold;\n    }\n    ";
+  v.innerHTML = "\n    #cyberPanel{ \n        position:fixed; \n        right:20px; \n        bottom:20px; \n        width:280px; \n        z-index:999999; \n        background:rgba(10, 15, 31, 0.9); \n        border:1px solid #00f7ff33; \n        border-radius:16px; \n        backdrop-filter:blur(16px); \n        box-shadow: \n            0 8px 32px rgba(0, 0, 0, 0.4),\n            0 0 15px #00f7ff22; \n        overflow:hidden; \n        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; \n    } \n    \n    .cyber-header{ \n        padding:10px 15px; \n        background:linear-gradient(90deg,#00f7ff15,#7a00ff15); \n        color:#00f7ff; \n        font-size: 11px;\n        letter-spacing: 1px;\n        font-weight:bold; \n        text-align:center; \n        cursor:move; \n        border-bottom:1px solid #00f7ff22; \n        user-select:none;\n        text-transform: uppercase;\n    } \n    \n    .cyber-body{ \n        padding:15px; \n    } \n    \n    .cyber-label{ \n        color:#8defff; \n        font-size:10px; \n        margin-bottom:6px; \n        display:block; \n        text-transform: uppercase;\n        letter-spacing: 0.5px;\n        opacity: 0.8;\n    } \n    \n    .cyber-input{ \n        width:100%; \n        box-sizing:border-box; \n        padding:8px 12px; \n        background:rgba(17, 24, 39, 0.5); \n        border:1px solid #00f7ff33; \n        border-radius:10px; \n        color:#fff; \n        font-size:14px; \n        outline:none; \n        transition: all 0.3s ease;\n    } \n    \n    .cyber-input:focus{ \n        border-color: #00f7ff88;\n        box-shadow:0 0 12px #00f7ff33; \n    } \n    \n    .cyber-buttons{ \n        display:flex; \n        gap:10px; \n        margin-top:12px; \n    } \n    \n    .cyber-btn{ \n        flex:1; \n        border:none; \n        padding:8px; \n        border-radius:8px; \n        cursor:pointer; \n        font-size: 11px;\n        font-weight:bold; \n        transition:all .2s ease; \n        text-transform: uppercase;\n        letter-spacing: 0.5px;\n    } \n    \n    .start-btn{ \n        background:#00f7ff; \n        color:#000; \n    } \n    \n    .start-btn:hover{ \n        transform:translateY(-1px); \n        box-shadow:0 0 12px #00f7ff88; \n    } \n    \n    .stop-btn{ \n        background:rgba(255, 45, 85, 0.2); \n        color:#ff2d55; \n        border: 1px solid #ff2d5544;\n    } \n    \n    .stop-btn:hover{ \n        background:rgba(255, 45, 85, 0.3); \n        transform:translateY(-1px); \n        box-shadow:0 0 12px #ff2d5533; \n    } \n    \n    .cyber-status{ \n        margin-top:12px; \n        background:rgba(17, 24, 39, 0.6); \n        border-radius:10px; \n        padding:8px 12px; \n        display: flex;\n        align-items: center;\n        justify-content: center;\n        text-align:center; \n        color:#00ff95; \n        font-size:11px; \n        border:1px solid #00ff9533; \n        min-height: 36px;\n        box-shadow: inset 0 0 5px #00ff9511;\n        text-transform: uppercase;\n        letter-spacing: 0.3px;\n        transition: all 0.3s ease;\n    } \n\n    /* Toggle Switch Styles */\n    .toggle-container {\n        display: flex;\n        background: #111827;\n        border: 1px solid #00f7ff33;\n        border-radius: 10px;\n        margin-bottom: 12px;\n        padding: 3px;\n        gap: 3px;\n    }\n\n    .toggle-option {\n        flex: 1;\n        padding: 6px;\n        text-align: center;\n        color: #8defff;\n        font-size: 11px;\n        font-weight: bold;\n        cursor: pointer;\n        border-radius: 6px;\n        transition: .3s;\n        user-select: none;\n    }\n\n    .toggle-option.active {\n        background: #00f7ff;\n        color: #000;\n        box-shadow: 0 0 8px #00f7ff66;\n    }\n\n    #overlay-status-container {\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        gap: 15px;\n    }\n\n    #overlay-live-status {\n        font-size: 18px;\n        color: #00ff95;\n        text-transform: uppercase;\n        letter-spacing: 1.5px;\n        margin-bottom: 5px;\n        text-shadow: 0 0 10px #00ff95aa;\n    }\n    ";
   document.head.appendChild(v);
   let v2 = document.getElementById("cyberOverlay");
   if (!v2) {
     v2 = document.createElement("div");
     v2.id = "cyberOverlay";
-    v2.style.cssText = "\n            position:fixed;\n            inset:0;\n            background:rgba(0,0,0,0.85);\n            backdrop-filter:blur(12px);\n            z-index:999998;\n            display:none;\n            align-items:center;\n            justify-content:center;\n            color:#00ff95;\n            font-family:Arial,sans-serif;\n            text-shadow:0 0 15px rgba(0,255,149,0.6);\n        ";
+    v2.style.cssText = "\n            position:fixed;\n            inset:0;\n            background:rgba(0,0,0,0.85);\n            backdrop-filter:blur(12px);\n            z-index:999998;\n            display:none;\n            align-items:center;\n            justify-content:center;\n            color:#00f7ff;\n            font-family:Arial,sans-serif;\n            text-shadow:0 0 10px #00f7ff;\n        ";
     v2.innerHTML = "\n        <div id=\"overlay-status-container\">\n            <div id=\"overlay-live-status\">INITIALIZING...</div>\n            <h1 style=\"font-size:24px;letter-spacing:8px;margin:0;opacity:0.6;\">SYSTEM ACTIVE</h1>\n        </div>";
     document.body.appendChild(v2);
   }
@@ -41,23 +41,23 @@
       const v12 = /SUCCESS|🟢/i.test(p2);
       if (v11) {
         v5.style.color = "#ff2d55";
-        v5.style.borderColor = "rgba(255, 45, 85, 0.4)";
-        v5.style.boxShadow = "inset 0 0 10px rgba(255, 45, 85, 0.1)";
+        v5.style.borderColor = "#ff2d5544";
+        v5.style.boxShadow = "inset 0 0 5px #ff2d5511";
       } else if (v12) {
         v5.style.color = "#00ff95";
-        v5.style.borderColor = "rgba(0, 255, 149, 0.4)";
-        v5.style.boxShadow = "inset 0 0 10px rgba(0, 255, 149, 0.1)";
+        v5.style.borderColor = "#00ff9544";
+        v5.style.boxShadow = "inset 0 0 5px #00ff9511";
       } else {
-        v5.style.color = "#00ff95";
-        v5.style.borderColor = "rgba(0, 255, 149, 0.4)";
-        v5.style.boxShadow = "inset 0 0 10px rgba(0, 255, 149, 0.1)";
+        v5.style.color = "#00f7ff";
+        v5.style.borderColor = "#00f7ff33";
+        v5.style.boxShadow = "inset 0 0 5px #00f7ff11";
       }
     }
     if (v3) {
       v3.innerText = p2;
       const v13 = /denied|not found|Error|Stopped|🔴/i.test(p2);
       v3.style.color = v13 ? "#ff2d55" : "#00ff95";
-      v3.style.textShadow = v13 ? "0 0 15px rgba(255, 45, 85, 0.7)" : "0 0 15px rgba(0, 255, 149, 0.7)";
+      v3.style.textShadow = v13 ? "0 0 10px #ff2d55aa" : "0 0 10px #00ff95aa";
     }
   }
   async function f2(p3) {
@@ -75,8 +75,8 @@
   }
   if (!firebase.apps.length) {
     firebase.initializeApp({
-      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-      projectId: "my-ar-automation"
+      apiKey: "AIzaSyCI7WjTsCfYrFU0U38y84PvSE1ysoOmc68",
+      projectId: "wallet-automation-a59da"
     });
   }
   let v15 = null;
@@ -298,4 +298,4 @@
     }
   }
 })();
-        
+    
