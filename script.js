@@ -5,12 +5,12 @@
         position: fixed;
         right: 20px;
         bottom: 20px;
-        width: 300px;
+        width: 280px;
         z-index: 999999;
         background: #f0ebe4;
-        border-radius: 28px;
+        border-radius: 22px;
         box-shadow: 
-            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 15px 35px rgba(0, 0, 0, 0.12),
             0 1px 3px rgba(0, 0, 0, 0.05),
             inset 0 1px 1px rgba(255, 255, 255, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.7);
@@ -20,16 +20,16 @@
     }
 
     .cyber-header {
-        padding: 16px 20px 8px 20px;
+        padding: 10px 14px 4px 14px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         cursor: move;
     }
 
     .cyber-header-badge {
-        width: 32px;
-        height: 32px;
+        width: 26px;
+        height: 26px;
         background: radial-gradient(circle at 35% 35%, #ebd7b7, #bfa37b, #8a704c);
         border-radius: 50%;
         display: flex;
@@ -37,12 +37,12 @@
         justify-content: center;
         box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 4px rgba(0,0,0,0.15);
         color: #fff;
-        font-size: 13px;
+        font-size: 11px;
     }
 
     .cyber-header-title {
         color: #7d7265;
-        font-size: 14px;
+        font-size: 11px;
         letter-spacing: 0.8px;
         font-weight: 800;
         text-transform: uppercase;
@@ -56,34 +56,34 @@
     }
 
     .cyber-body {
-        padding: 10px 20px 20px 20px;
+        padding: 8px 14px 14px 14px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
 
     .cyber-label {
         color: #9d9489;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 700;
         margin-bottom: 2px;
         display: block;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.5px;
     }
 
     /* Toggle Buttons */
     .toggle-container {
         display: grid;
         grid-template-columns: 1.2fr 1fr;
-        gap: 8px;
+        gap: 6px;
     }
 
     .toggle-option {
-        padding: 10px 0;
+        padding: 7px 0;
         text-align: center;
-        border-radius: 12px;
-        font-size: 13px;
+        border-radius: 10px;
+        font-size: 11px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -96,17 +96,17 @@
         background: #509796;
         color: #ffffff;
         box-shadow: 
-            0 0 0 2px rgba(226, 177, 89, 0.9),
-            0 0 12px rgba(226, 177, 89, 0.45);
+            0 0 0 1.5px rgba(226, 177, 89, 0.9),
+            0 0 10px rgba(226, 177, 89, 0.45);
     }
 
     /* Input Field */
     .cyber-input {
         width: 100%;
         box-sizing: border-box;
-        height: 42px;
-        padding: 0 14px;
-        border-radius: 12px;
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 10px;
         border: 1px solid rgba(0, 0, 0, 0.04);
         background: repeating-linear-gradient(
             -45deg,
@@ -117,7 +117,7 @@
         );
         box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8);
         color: #554e44;
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 700;
         outline: none;
     }
@@ -126,27 +126,27 @@
     .cyber-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 4px;
+        gap: 8px;
+        margin-top: 2px;
     }
 
     .cyber-btn {
-        height: 40px;
+        height: 34px;
         border: none;
-        border-radius: 20px;
+        border-radius: 17px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 800;
         transition: all .2s ease;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.5px;
     }
 
     .start-btn {
         background: #54748b;
         color: #ffffff;
-        border: 1.5px solid #d1b480;
-        box-shadow: 0 2px 6px rgba(84, 116, 139, 0.25);
+        border: 1.2px solid #d1b480;
+        box-shadow: 0 2px 5px rgba(84, 116, 139, 0.25);
     }
 
     .start-btn:hover {
@@ -157,8 +157,8 @@
         background: #b55e65;
         color: #ffd2d5;
         box-shadow: 
-            0 0 0 1.5px rgba(225, 102, 102, 0.5),
-            0 0 10px rgba(225, 90, 90, 0.3);
+            0 0 0 1.2px rgba(225, 102, 102, 0.5),
+            0 0 8px rgba(225, 90, 90, 0.3);
     }
 
     .stop-btn:hover {
@@ -167,18 +167,18 @@
 
     /* Status Indicator */
     .cyber-status {
-        margin-top: 4px;
+        margin-top: 2px;
         background: #ded7cd;
-        border-radius: 14px;
-        height: 40px;
+        border-radius: 10px;
+        height: 34px;
         display: flex;
         align-items: center;
         justify-content: center;
         text-align: center;
         color: #ba5d58;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.5px;
         text-transform: uppercase;
         box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
         transition: all 0.3s ease;
@@ -619,3 +619,4 @@
     }
   }
 })();
+                                                
