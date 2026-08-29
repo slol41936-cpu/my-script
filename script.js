@@ -9,14 +9,26 @@
         z-index: 999999;
         background: #f0ebe4;
         border-radius: 22px;
+        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
         box-shadow: 
-            0 15px 35px rgba(0, 0, 0, 0.12),
-            0 1px 3px rgba(0, 0, 0, 0.05),
+            0 20px 45px rgba(0, 0, 0, 0.25),
+            0 8px 16px rgba(0, 0, 0, 0.15),
+            0 0 20px rgba(197, 160, 89, 0.15),
             inset 0 1px 1px rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.8);
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         user-select: none;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
+    #cyberPanel:hover {
+        box-shadow: 
+            0 25px 50px rgba(0, 0, 0, 0.3),
+            0 10px 20px rgba(0, 0, 0, 0.18),
+            0 0 25px rgba(197, 160, 89, 0.25),
+            inset 0 1px 1px rgba(255, 255, 255, 1);
     }
 
     .cyber-header {
@@ -35,7 +47,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 4px rgba(0,0,0,0.15);
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 5px rgba(0,0,0,0.2);
         color: #fff;
         font-size: 11px;
     }
@@ -97,7 +109,7 @@
         color: #ffffff;
         box-shadow: 
             0 0 0 1.5px rgba(226, 177, 89, 0.9),
-            0 0 10px rgba(226, 177, 89, 0.45);
+            0 4px 10px rgba(80, 151, 150, 0.4);
     }
 
     /* Input Field */
@@ -146,11 +158,12 @@
         background: #54748b;
         color: #ffffff;
         border: 1.2px solid #d1b480;
-        box-shadow: 0 2px 5px rgba(84, 116, 139, 0.25);
+        box-shadow: 0 4px 10px rgba(84, 116, 139, 0.35);
     }
 
     .start-btn:hover {
         filter: brightness(1.05);
+        transform: translateY(-1px);
     }
 
     .stop-btn {
@@ -158,11 +171,12 @@
         color: #ffd2d5;
         box-shadow: 
             0 0 0 1.2px rgba(225, 102, 102, 0.5),
-            0 0 8px rgba(225, 90, 90, 0.3);
+            0 4px 10px rgba(181, 94, 101, 0.35);
     }
 
     .stop-btn:hover {
         filter: brightness(1.05);
+        transform: translateY(-1px);
     }
 
     /* Status Indicator */
@@ -619,4 +633,4 @@
     }
   }
 })();
-                                                
+    
