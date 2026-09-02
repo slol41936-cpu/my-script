@@ -1,246 +1,636 @@
 (async function () {
-  let v = null;
-  let v2 = false;
-  let v3 = null;
-  let v4 = null;
-  let v5 = false;
-  let v6 = null;
-  const vLSAmountfilterpanel = "amount-filter-panel";
-  const vLSXbuyListlist = "x-buyList-list";
-  let v7 = false;
-  const v8 = new Audio("https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg");
-  v8.volume = 1;
-  function f() {
-    v8.currentTime = 0;
-    v8.play().catch(() => {});
-    setTimeout(() => {
-      v8.pause();
-      v8.currentTime = 0;
-    }, 3000);
+  const v = document.createElement("style");
+  v.innerHTML = `
+    #cyberPanel {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        width: 280px;
+        z-index: 999999;
+        background: #f0ebe4;
+        border-radius: 22px;
+        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
+        box-shadow: 
+            0 20px 45px rgba(0, 0, 0, 0.25),
+            0 8px 16px rgba(0, 0, 0, 0.15),
+            0 0 20px rgba(197, 160, 89, 0.15),
+            inset 0 1px 1px rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        user-select: none;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
+    #cyberPanel:hover {
+        box-shadow: 
+            0 25px 50px rgba(0, 0, 0, 0.3),
+            0 10px 20px rgba(0, 0, 0, 0.18),
+            0 0 25px rgba(197, 160, 89, 0.25),
+            inset 0 1px 1px rgba(255, 255, 255, 1);
+    }
+
+    .cyber-header {
+        padding: 10px 14px 4px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: move;
+    }
+
+    .cyber-header-badge {
+        width: 26px;
+        height: 26px;
+        background: radial-gradient(circle at 35% 35%, #ebd7b7, #bfa37b, #8a704c);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 5px rgba(0,0,0,0.2);
+        color: #fff;
+        font-size: 11px;
+    }
+
+    .cyber-header-title {
+        color: #7d7265;
+        font-size: 11px;
+        letter-spacing: 0.8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .cyber-header-title span {
+        color: #c5a059;
+    }
+
+    .cyber-body {
+        padding: 8px 14px 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .cyber-label {
+        color: #9d9489;
+        font-size: 10px;
+        font-weight: 700;
+        margin-bottom: 2px;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Toggle Buttons */
+    .toggle-container {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 6px;
+    }
+
+    .toggle-option {
+        padding: 7px 0;
+        text-align: center;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #ded7ce;
+        color: #8c8378;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .toggle-option.active {
+        background: #509796;
+        color: #ffffff;
+        box-shadow: 
+            0 0 0 1.5px rgba(226, 177, 89, 0.9),
+            0 4px 10px rgba(80, 151, 150, 0.4);
+    }
+
+    /* Input Field */
+    .cyber-input {
+        width: 100%;
+        box-sizing: border-box;
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        background: repeating-linear-gradient(
+            -45deg,
+            #ebe4dc,
+            #ebe4dc 4px,
+            #e5ded5 4px,
+            #e5ded5 8px
+        );
+        box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8);
+        color: #554e44;
+        font-size: 13px;
+        font-weight: 700;
+        outline: none;
+    }
+
+    /* Action Buttons */
+    .cyber-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 2px;
+    }
+
+    .cyber-btn {
+        height: 34px;
+        border: none;
+        border-radius: 17px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 800;
+        transition: all .2s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .start-btn {
+        background: #54748b;
+        color: #ffffff;
+        border: 1.2px solid #d1b480;
+        box-shadow: 0 4px 10px rgba(84, 116, 139, 0.35);
+    }
+
+    .start-btn:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    .stop-btn {
+        background: #b55e65;
+        color: #ffd2d5;
+        box-shadow: 
+            0 0 0 1.2px rgba(225, 102, 102, 0.5),
+            0 4px 10px rgba(181, 94, 101, 0.35);
+    }
+
+    .stop-btn:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    /* Status Indicator */
+    .cyber-status {
+        margin-top: 2px;
+        background: #ded7cd;
+        border-radius: 10px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #ba5d58;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
+        transition: all 0.3s ease;
+    }
+
+    #overlay-status-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    #overlay-live-status {
+        font-size: 18px;
+        color: #509796;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 5px;
+        text-shadow: 0 0 10px rgba(80, 151, 150, 0.5);
+    }
+  `;
+  document.head.appendChild(v);
+
+  let v2 = document.getElementById("cyberOverlay");
+  if (!v2) {
+    v2 = document.createElement("div");
+    v2.id = "cyberOverlay";
+    v2.style.cssText = `
+        position:fixed;
+        inset:0;
+        background:rgba(235, 230, 222, 0.88);
+        backdrop-filter:blur(8px);
+        z-index:999998;
+        display:none;
+        align-items:center;
+        justify-content:center;
+        color:#7d7265;
+        font-family:Arial,sans-serif;
+    `;
+    v2.innerHTML = `
+        <div id="overlay-status-container">
+            <div id="overlay-live-status">INITIALIZING...</div>
+            <h1 style="font-size:22px;letter-spacing:6px;margin:0;opacity:0.6;color:#554e44;">SYSTEM ACTIVE</h1>
+        </div>`;
+    document.body.appendChild(v2);
   }
-  function f2(p) {
-    return new Promise((p2, p3) => {
-      const v9 = document.createElement("script");
-      v9.src = p;
-      v9.onload = p2;
-      v9.onerror = p3;
-      document.head.appendChild(v9);
+  const v3 = document.getElementById("overlay-live-status");
+  let v4 = document.getElementById("cyberPanel");
+  if (!v4) {
+    v4 = document.createElement("div");
+    v4.id = "cyberPanel";
+    v4.innerHTML = `
+        <div class="cyber-header">
+            <div class="cyber-header-badge">⚡</div>
+            <div class="cyber-header-title">
+                <span>⚡</span> AUTO BUY PANEL
+            </div>
+        </div> 
+    
+        <div class="cyber-body"> 
+            <div>
+                <label class="cyber-label">Payment Type</label>
+                <div class="toggle-container" id="orderTypeToggle">
+                    <div class="toggle-option active" data-value="1">UPI</div>
+                    <div class="toggle-option" data-value="2">BANK</div>
+                </div>
+            </div>
+
+            <div>
+                <label class="cyber-label">Amount</label> 
+                <input 
+                    type="text" 
+                    id="buyAmount" 
+                    class="cyber-input" 
+                    value="1000"
+                    min="1" 
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                > 
+            </div>
+    
+            <div class="cyber-buttons"> 
+                <button id="startBtn" class="cyber-btn start-btn">START</button> 
+                <button id="stopBtn" class="cyber-btn stop-btn">STOP</button> 
+            </div> 
+    
+            <div class="cyber-status" id="cyberStatus">Ready</div> 
+        </div>`;
+    document.body.appendChild(v4);
+  }
+  const v5 = document.getElementById("cyberStatus");
+  const v6 = document.getElementById("startBtn");
+  const v7 = document.getElementById("stopBtn");
+  const v8 = document.getElementById("buyAmount");
+  const v9 = document.getElementById("orderTypeToggle");
+  let v10 = false;
+  let vLN1 = 1;
+  let v11 = false;
+
+  v9.querySelectorAll(".toggle-option").forEach(p => {
+    p.onclick = () => {
+      v9.querySelector(".active").classList.remove("active");
+      p.classList.add("active");
+      vLN1 = Number(p.dataset.value);
+      console.log("Selected Order Type:", vLN1 === 1 ? "UPI" : "BANK");
+    };
+  });
+
+  function f(p2) {
+    console.log(p2);
+    if (v5) {
+      v5.innerText = p2;
+      const v12 = /denied|not found|Error|Stopped|🔴/i.test(p2);
+      const v13 = /SUCCESS|🟢/i.test(p2);
+      if (v12) {
+        v5.style.color = "#ba5d58";
+        v5.style.border = "1px solid rgba(186, 93, 88, 0.3)";
+      } else if (v13) {
+        v5.style.color = "#3d8573";
+        v5.style.border = "1px solid rgba(61, 133, 115, 0.4)";
+      } else {
+        v5.style.color = "#7d7265";
+        v5.style.border = "none";
+      }
+    }
+    if (v3) {
+      v3.innerText = p2;
+      const v14 = /denied|not found|Error|Stopped|🔴/i.test(p2);
+      v3.style.color = v14 ? "#ba5d58" : "#3d8573";
+      v3.style.textShadow = v14 ? "0 0 10px rgba(186, 93, 88, 0.4)" : "0 0 10px rgba(61, 133, 115, 0.4)";
+    }
+  }
+
+  async function f2(p3) {
+    return new Promise((p4, p5) => {
+      const v15 = document.createElement("script");
+      v15.src = p3;
+      v15.onload = p4;
+      v15.onerror = p5;
+      document.head.appendChild(v15);
     });
   }
+
   if (!window.firebase) {
     await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
     await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
   }
-  
-  // এখানে আপনার দেওয়া নতুন ফায়ারবেস আইডি বসানো হয়েছে, লজিক একদম সেম আছে
+
   if (!firebase.apps.length) {
     firebase.initializeApp({
       apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-      projectId: "my-ar-automation"
+      authDomain: "my-ar-automation.firebaseapp.com",
+      projectId: "my-ar-automation",
+      storageBucket: "my-ar-automation.firebasestorage.app",
+      messagingSenderId: "443374813761",
+      appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
     });
   }
-  
-  async function f3() {
+
+  let v16 = null;
+  function f3(p6) {
+    return new Promise(p7 => setTimeout(p7, p6));
+  }
+
+  let v17 = null;
+  try {
+    const v18 = await f8();
+    const v19 = v18.allowed;
+    v11 = v18.isPremium;
+    f7();
+    if (!v19) {
+      f("Access denied");
+      return;
+    }
+
+    function f4() {
+      const vNumber = Number(v8.value);
+      if (!v11) {
+        if (vNumber < 1000) {
+          v6.disabled = true;
+          v6.style.opacity = "0.5";
+          v6.style.cursor = "not-allowed";
+        } else {
+          v6.disabled = false;
+          v6.style.opacity = "1";
+          v6.style.cursor = "pointer";
+        }
+      } else {
+        v6.disabled = false;
+        v6.style.opacity = "1";
+        v6.style.cursor = "pointer";
+      }
+    }
+
+    if (!v11) {
+      v8.value = "1000";
+    }
+
+    v8.addEventListener("input", f4);
+    f4();
+
+    const v20 = localStorage.getItem("token");
+    if (v20) {
+      try {
+        v17 = JSON.parse(v20)?.value || v20;
+      } catch {
+        v17 = v20;
+      }
+    }
+    if (!v17 && window.token?.value) {
+      v17 = window.token.value;
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  if (!v17) {
+    f("Token not found");
+    return;
+  }
+
+  const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
+  localStorage.setItem("arb_device_code", v21);
+
+  const vO = {
+    accept: "application/json, text/plain, */*",
+    "content-type": "application/json",
+    authorization: "Bearer " + v17,
+    deviceId: "undefined",
+    deviceType: "3",
+    page: "Arb",
+    deviceCode: v21
+  };
+
+  v6.onclick = () => {
+    if (v10) {
+      return;
+    }
+    const vNumber2 = Number(v8.value);
+    if (!vNumber2) {
+      f("Enter amount");
+      return;
+    }
+    if (!v11 && vNumber2 < 1000) {
+      f("Minimum order value is 1000");
+      return;
+    }
+    v10 = true;
+    v2.style.display = "flex";
+    f("🟢 Running | Amount ₹" + vNumber2);
+    f5(vNumber2, vLN1);
+  };
+
+  v7.onclick = () => {
+    v10 = false;
+    v2.style.display = "none";
+    f("🔴 Stopped");
+  };
+
+  (function () {
+    const v22 = v4.querySelector(".cyber-header");
+    let v23 = false;
+    let vLN0 = 0;
+    let vLN02 = 0;
+
+    v22.addEventListener("mousedown", p8 => {
+      v23 = true;
+      vLN0 = p8.clientX - v4.offsetLeft;
+      vLN02 = p8.clientY - v4.offsetTop;
+    });
+
+    document.addEventListener("mouseup", () => {
+      v23 = false;
+    });
+
+    document.addEventListener("mousemove", p9 => {
+      if (!v23) {
+        return;
+      }
+      v4.style.left = p9.clientX - vLN0 + "px";
+      v4.style.top = p9.clientY - vLN02 + "px";
+      v4.style.right = "auto";
+      v4.style.bottom = "auto";
+    });
+  })();
+
+  async function f5(p10, p11) {
+    while (v10) {
+      try {
+        const v24 = p11 === 1 ? "UPI" : "BANK";
+        f("Checking " + v24 + " orders for ₹" + p10 + "...");
+        const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
+          method: "POST",
+          headers: vO,
+          body: JSON.stringify({
+            orderType: p11,
+            pageNo: 1
+          })
+        });
+        const v26 = await v25.json();
+        const v27 = v26?.data?.list || [];
+        if (!v27.length) {
+          f("No orders found...");
+          await f3(300);
+          continue;
+        }
+        const v28 = v27.filter(p12 => Number(p12.amount) === p10);
+        if (!v28.length) {
+          f("Waiting for order ₹" + p10);
+          await f3(300);
+          continue;
+        }
+        for (const v29 of v28) {
+          if (!v10) {
+            break;
+          }
+          f("Trying ₹" + v29.amount);
+          const vO2 = {
+            amount: v29.amount,
+            platformOrder: v29.platformOrder,
+            payType: v29.payType,
+            orderType: v29.orderType
+          };
+          try {
+            const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
+              method: "POST",
+              headers: vO,
+              body: JSON.stringify(vO2)
+            });
+            const v31 = await v30.json();
+            if (v31.code !== "1") {
+              continue;
+            }
+            const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
+              method: "POST",
+              headers: vO,
+              body: JSON.stringify({
+                amount: v29.amount,
+                platformOrder: v29.platformOrder,
+                payType: v29.payType,
+                orderType: v29.orderType,
+                buyBankCode: "moneyView",
+                buyerKycId: ""
+              })
+            });
+            const v33 = await v32.json();
+            if (v33.code === "1" || v33.msg === "Success") {
+              f("SUCCESS ₹" + v29.amount);
+              location.reload();
+              return;
+            }
+          } catch (e2) {
+            console.error(e2);
+          }
+        }
+        await f3(300);
+      } catch (e3) {
+        console.error(e3);
+        f("Error. Retrying...");
+        await f3(500);
+      }
+    }
+  }
+
+  async function f6() {
     try {
-      const v10 = JSON.parse(localStorage.getItem("userInfo"));
-      const v11 = v10?.value?.memberId || v10?.value?.memberld;
-      const v12 = v10?.balance ?? v10?.value?.balance;
-      if (!v11 || v12 === undefined || v12 === null) {
+      const v34 = JSON.parse(localStorage.getItem("userInfo"));
+      const v35 = v34?.value?.memberId || v34?.value?.memberld;
+      const v36 = v34?.balance ?? v34?.value?.balance;
+      if (!v35 || v36 === undefined || v36 === null) {
         return;
       }
-      const v13 = firebase.firestore();
-      const v14 = await v13.collection("members").where("walletUserId", "==", String(v11)).limit(1).get();
-      if (v14.empty) {
+      const v37 = firebase.firestore();
+      const v38 = await v37.collection("members").where("walletUserId", "==", String(v35)).limit(1).get();
+      if (v38.empty) {
         return;
       }
-      const v15 = v14.docs[0];
-      const v16 = v13.collection("members").doc(v15.id);
-      const v17 = v15.data();
-      const vNumber = Number(v17.balance ?? 0);
-      const vNumber2 = Number(v12);
-      if (vNumber === vNumber2) {
+      const v39 = v38.docs[0];
+      const v40 = v37.collection("members").doc(v39.id);
+      const v41 = v39.data();
+      const vNumber3 = Number(v41.balance ?? 0);
+      const vNumber4 = Number(v36);
+      if (vNumber3 === vNumber4) {
         return;
       }
-      const v18 = vNumber2 - vNumber;
-      const v19 = v18 > 0 ? "credit" : "debit";
-      const v20 = Math.abs(v18);
-      await v13.collection("transactions").add({
-        walletUserId: String(v11),
-        previousBalance: vNumber,
-        updatedBalance: vNumber2,
-        amount: v20,
-        type: v19,
+      const v42 = vNumber4 - vNumber3;
+      await v37.collection("transactions").add({
+        walletUserId: String(v35),
+        previousBalance: vNumber3,
+        updatedBalance: vNumber4,
+        amount: Math.abs(v42),
+        type: v42 > 0 ? "credit" : "debit",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      await v16.update({
-        balance: vNumber2,
+      await v40.update({
+        balance: vNumber4,
         balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-    } catch (e) {
-      console.error("Balance sync error:", e);
+    } catch (e4) {
+      console.error("Balance sync error:", e4);
     }
   }
-  function f4() {
-    if (v6) {
-      return;
-    }
-    f3();
-    v6 = setInterval(f3, 15000);
-  }
-  async function f5() {
-    try {
-      const v21 = JSON.parse(localStorage.getItem("userInfo"));
-      const v22 = v21?.value?.memberId || v21?.value?.memberld;
-      if (!v22) {
-        return false;
-      }
-      const v23 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v22)).where("active", "==", true).limit(1).get();
-      return !v23.empty;
-    } catch {
-      return false;
-    }
-  }
-  function f6() {
-    return document.querySelector("." + vLSXbuyListlist) !== null;
-  }
+
   function f7() {
-    v28.style.display = f6() ? "block" : "none";
-  }
-  function f8() {
-    if (!f6()) {
-      f15(true);
-      f7();
+    if (v16) {
       return;
     }
-    const v24 = v31.value.trim();
-    document.querySelectorAll("." + vLSXbuyListlist + " *").forEach(p4 => {
-      if (p4.closest("." + vLSAmountfilterpanel)) {
-        return;
+    f6();
+    v16 = setInterval(f6, 15000);
+  }
+
+  async function f8() {
+    try {
+      const v43 = JSON.parse(localStorage.getItem("userInfo"));
+      const v44 = v43?.value?.memberId || v43?.value?.memberld;
+      if (!v44) {
+        return {
+          allowed: false,
+          isPremium: false
+        };
       }
-      if (p4.innerText?.includes("₹")) {
-        p4.style.display = p4.innerText.includes("₹" + v24) && !p4.innerText.includes("₹" + v24 + "0") ? "" : "none";
+      const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
+      if (v45.empty) {
+        return {
+          allowed: false,
+          isPremium: false
+        };
       }
-    });
-  }
-  function f9(p5) {
-    const v25 = p5.getBoundingClientRect();
-    return v25.width > 0 && v25.height > 0 && v25.top < window.innerHeight && v25.bottom > 0;
-  }
-  function f10() {
-    if (v3) {
-      return;
+      const v46 = v45.docs[0].data();
+      return {
+        allowed: true,
+        isPremium: v46.is_premium === true
+      };
+    } catch {
+      return {
+        allowed: false,
+        isPremium: false
+      };
     }
-    v3 = setInterval(() => {
-      const v26 = document.querySelector(".item.active");
-      if (v26) {
-        v26.click();
-      }
-    }, 500);
   }
-  function f11() {
-    if (v4) {
-      return;
-    }
-    v4 = setInterval(() => {
-      document.querySelectorAll("div.x-row.x-row-middle button").forEach(p6 => {
-        if (f9(p6)) {
-          p6.click();
-        }
-      });
-    }, 50);
-  }
-  function f12() {
-    clearInterval(v3);
-    clearInterval(v4);
-    v3 = null;
-    v4 = null;
-  }
-  function f13() {
-    if (v5) {
-      return;
-    }
-    v5 = true;
-    let vLN0 = 0;
-    const vSetInterval = setInterval(() => {
-      const v27 = document.querySelector("div.x-row.x-row-between.bgfreo");
-      if (v27) {
-        v27.click();
-        clearInterval(vSetInterval);
-      } else if (++vLN0 >= 10) {
-        clearInterval(vSetInterval);
-      }
-    }, 200);
-  }
-  function f14() {
-    if (!v7 || v2) {
-      return;
-    }
-    if (!f6()) {
-      return;
-    }
-    v2 = true;
-    v5 = false;
-    f8();
-    v = new MutationObserver(f8);
-    v.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-    v35.textContent = "Active";
-    v30.style.background = "#22c55e";
-    f10();
-    f11();
-  }
-  function f15(p7 = false) {
-    if (!v2) {
-      return;
-    }
-    v2 = false;
-    f12();
-    if (v) {
-      v.disconnect();
-    }
-    f13();
-    if (p7) {
-      f();
-    }
-    v35.textContent = "Stopped";
-    v30.style.background = "#ef4444";
-  }
-  const v28 = document.createElement("div");
-  v28.className = vLSAmountfilterpanel;
-  v28.style.cssText = "\n        position: fixed;\n        bottom: 24px;\n        right: 24px;\n        background: #fff;\n        border-radius: 12px;\n        padding: 14px;\n        width: 220px;\n        font-family: system-ui;\n        box-shadow: 0 12px 28px rgba(0,0,0,.15);\n        z-index: 999999;\n        display: none;\n    ";
-  const v29 = document.createElement("div");
-  v29.textContent = "AR Wallet";
-  v29.style.cssText = "display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px";
-  const v30 = document.createElement("span");
-  v30.style.cssText = "width:10px;height:10px;border-radius:50%;background:#ef4444";
-  v29.appendChild(v30);
-  const v31 = document.createElement("input");
-  v31.type = "number";
-  v31.value = "1000";
-  v31.style.cssText = "\n        width:100%;\n        padding:8px;\n        margin-bottom:10px;\n        border:1px solid #d1d5db;\n        border-radius:6px;\n        background:#fff;\n        color:#111;\n        font-size:14px;\n    ";
-  const v32 = document.createElement("div");
-  v32.style.cssText = "display:flex;gap:8px";
-  const v33 = document.createElement("button");
-  v33.textContent = "Start";
-  v33.style.cssText = "flex:1;background:#22c55e;color:#fff;border:none;padding:8px;border-radius:8px";
-  const v34 = document.createElement("button");
-  v34.textContent = "Stop";
-  v34.style.cssText = "flex:1;background:#ef4444;color:#fff;border:none;padding:8px;border-radius:8px";
-  const v35 = document.createElement("div");
-  v35.style.cssText = "margin-top:10px;font-size:12px;text-align:center";
-  v7 = await f5();
-  f4();
-  v35.textContent = v7 ? "Stopped" : "Access denied";
-  v33.onclick = f14;
-  v34.onclick = () => f15(false);
-  v32.append(v33, v34);
-  v28.append(v29, v31, v32, v35);
-  document.body.appendChild(v28);
-  new MutationObserver(f7).observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  f7();
 })();
+      
