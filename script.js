@@ -1,208 +1,201 @@
 (async function () {
-  // Google Fonts Import
-  if (!document.getElementById("cyberFontImports")) {
-    const fontLink = document.createElement("link");
-    fontLink.id = "cyberFontImports";
-    fontLink.rel = "stylesheet";
-    fontLink.href = "https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap";
-    document.head.appendChild(fontLink);
-  }
-
-  // Inject Custom Futuristic HUD CSS
   const v = document.createElement("style");
   v.innerHTML = `
     #cyberPanel {
         position: fixed;
         right: 20px;
         bottom: 20px;
-        width: 380px;
-        padding: 20px;
+        width: 280px;
         z-index: 999999;
-        background: rgba(14, 26, 54, 0.45);
-        border-radius: 24px;
-        border: 1.5px solid rgba(0, 240, 255, 0.4);
-        box-shadow: 0 0 35px rgba(0, 240, 255, 0.2), inset 0 0 25px rgba(112, 0, 255, 0.25);
-        backdrop-filter: blur(16px);
-        font-family: 'Orbitron', sans-serif;
-        clip-path: polygon(
-            0% 20px, 20px 0%, 
-            calc(100% - 20px) 0%, 100% 20px, 
-            100% calc(100% - 20px), calc(100% - 20px) 100%, 
-            20px 100%, 0% calc(100% - 20px)
-        );
-        box-sizing: border-box;
+        background: #f0ebe4;
+        border-radius: 22px;
+        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
+        box-shadow: 
+            0 20px 45px rgba(0, 0, 0, 0.25),
+            0 8px 16px rgba(0, 0, 0, 0.15),
+            0 0 20px rgba(197, 160, 89, 0.15),
+            inset 0 1px 1px rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        user-select: none;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
+    #cyberPanel:hover {
+        box-shadow: 
+            0 25px 50px rgba(0, 0, 0, 0.3),
+            0 10px 20px rgba(0, 0, 0, 0.18),
+            0 0 25px rgba(197, 160, 89, 0.25),
+            inset 0 1px 1px rgba(255, 255, 255, 1);
     }
 
     .cyber-header {
-        text-align: center;
-        margin-bottom: 20px;
+        padding: 10px 14px 4px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         cursor: move;
-        user-select: none;
     }
 
-    .panel-title {
-        color: #bce6ff;
-        font-size: 16px;
-        letter-spacing: 2px;
-        font-weight: 800;
-        text-transform: uppercase;
-        text-shadow: 0 0 10px #00f0ff, 0 0 20px #00a2ff;
+    .cyber-header-badge {
+        width: 26px;
+        height: 26px;
+        background: radial-gradient(circle at 35% 35%, #ebd7b7, #bfa37b, #8a704c);
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 5px rgba(0,0,0,0.2);
+        color: #fff;
+        font-size: 11px;
     }
 
-    .crystal-icon {
-        width: 10px;
-        height: 10px;
-        background: #c084fc;
-        transform: rotate(45deg);
-        box-shadow: 0 0 12px #c084fc, 0 0 20px #00f0ff;
+    .cyber-header-title {
+        color: #7d7265;
+        font-size: 11px;
+        letter-spacing: 0.8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .cyber-header-title span {
+        color: #c5a059;
+    }
+
+    .cyber-body {
+        padding: 8px 14px 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
 
     .cyber-label {
-        font-size: 11px;
-        color: #79a2cf;
-        letter-spacing: 2px;
-        margin-bottom: 8px;
-        text-transform: uppercase;
+        color: #9d9489;
+        font-size: 10px;
         font-weight: 700;
+        margin-bottom: 2px;
         display: block;
-        text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);
-    }
-
-    .payment-grid {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 18px;
-    }
-
-    .futuristic-btn {
-        flex: 1;
-        padding: 10px;
-        background: rgba(8, 20, 42, 0.6);
-        border-radius: 10px;
-        cursor: pointer;
-        font-family: 'Orbitron', sans-serif;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        transition: all 0.3s ease;
-        border: 1.5px solid rgba(0, 240, 255, 0.2);
-        color: #79a2cf;
-        text-align: center;
-    }
-
-    .futuristic-btn.active[data-value="1"] {
-        border: 1.5px solid #00f0ff;
-        color: #ffffff;
-        box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
-        background: rgba(0, 240, 255, 0.15);
-    }
-
-    .futuristic-btn.active[data-value="2"] {
-        border: 1.5px solid #00ffaa;
-        color: #00ffaa;
-        box-shadow: 0 0 15px rgba(0, 255, 170, 0.3), inset 0 0 10px rgba(0, 255, 170, 0.15);
-        background: rgba(0, 255, 170, 0.15);
-    }
-
-    .amount-box {
-        margin-bottom: 18px;
-    }
-
-    .input-wrapper {
-        position: relative;
-        background: rgba(5, 12, 28, 0.7);
-        border: 1.5px solid #38bdf8;
-        border-radius: 10px;
-        padding: 2px 12px;
-        box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
-        display: flex;
-        align-items: center;
-    }
-
-    .input-wrapper input {
-        width: 100%;
-        height: 38px;
-        background: transparent;
-        border: none;
-        outline: none;
-        color: #38bdf8;
-        font-family: 'Orbitron', sans-serif;
-        font-size: 16px;
-        letter-spacing: 2px;
-        font-weight: 700;
-        text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-    }
-
-    .action-grid {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-    }
-
-    .action-btn {
-        flex: 1;
-        height: 42px;
-        border-radius: 10px;
-        cursor: pointer;
-        font-family: 'Orbitron', sans-serif;
-        font-weight: 900;
-        font-size: 13px;
-        letter-spacing: 1.5px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-        border: none;
-    }
-
-    .btn-start {
-        background: rgba(0, 162, 255, 0.15);
-        border: 1.5px solid #00f0ff;
-        color: #00f0ff;
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 12px rgba(0, 240, 255, 0.2);
-    }
-
-    .btn-start:hover:not(:disabled) {
-        background: #00f0ff;
-        color: #03050a;
-        box-shadow: 0 0 25px #00f0ff;
-    }
-
-    .btn-stop {
-        background: rgba(236, 72, 153, 0.15);
-        border: 1.5px solid #ec4899;
-        color: #ec4899;
-        box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), inset 0 0 12px rgba(236, 72, 153, 0.2);
-    }
-
-    .btn-stop:hover {
-        background: #ec4899;
-        color: #ffffff;
-        box-shadow: 0 0 25px #ec4899;
-    }
-
-    .status-box {
-        background: rgba(0, 240, 255, 0.05);
-        border: 1.5px solid #00f0ff;
-        border-radius: 10px;
-        padding: 10px;
-        text-align: center;
-        color: #00f0ff;
-        font-weight: 800;
-        font-size: 11px;
-        letter-spacing: 2px;
-        text-shadow: 0 0 8px #00f0ff;
-        box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-        transition: all 0.3s ease;
         text-transform: uppercase;
-        min-height: 38px;
+        letter-spacing: 0.5px;
+    }
+
+    /* Toggle Buttons */
+    .toggle-container {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 6px;
+    }
+
+    .toggle-option {
+        padding: 7px 0;
+        text-align: center;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #ded7ce;
+        color: #8c8378;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .toggle-option.active {
+        background: #509796;
+        color: #ffffff;
+        box-shadow: 
+            0 0 0 1.5px rgba(226, 177, 89, 0.9),
+            0 4px 10px rgba(80, 151, 150, 0.4);
+    }
+
+    /* Input Field */
+    .cyber-input {
+        width: 100%;
+        box-sizing: border-box;
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        background: repeating-linear-gradient(
+            -45deg,
+            #ebe4dc,
+            #ebe4dc 4px,
+            #e5ded5 4px,
+            #e5ded5 8px
+        );
+        box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8);
+        color: #554e44;
+        font-size: 13px;
+        font-weight: 700;
+        outline: none;
+    }
+
+    /* Action Buttons */
+    .cyber-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 2px;
+    }
+
+    .cyber-btn {
+        height: 34px;
+        border: none;
+        border-radius: 17px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 800;
+        transition: all .2s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .start-btn {
+        background: #54748b;
+        color: #ffffff;
+        border: 1.2px solid #d1b480;
+        box-shadow: 0 4px 10px rgba(84, 116, 139, 0.35);
+    }
+
+    .start-btn:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    .stop-btn {
+        background: #b55e65;
+        color: #ffd2d5;
+        box-shadow: 
+            0 0 0 1.2px rgba(225, 102, 102, 0.5),
+            0 4px 10px rgba(181, 94, 101, 0.35);
+    }
+
+    .stop-btn:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    /* Status Indicator */
+    .cyber-status {
+        margin-top: 2px;
+        background: #ded7cd;
+        border-radius: 10px;
+        height: 34px;
         display: flex;
         align-items: center;
         justify-content: center;
+        text-align: center;
+        color: #ba5d58;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
+        transition: all 0.3s ease;
     }
 
     #overlay-status-container {
@@ -214,11 +207,11 @@
 
     #overlay-live-status {
         font-size: 18px;
-        color: #00ff95;
+        color: #509796;
         text-transform: uppercase;
         letter-spacing: 1.5px;
         margin-bottom: 5px;
-        text-shadow: 0 0 10px #00ff95aa;
+        text-shadow: 0 0 10px rgba(80, 151, 150, 0.5);
     }
   `;
   document.head.appendChild(v);
@@ -228,70 +221,67 @@
     v2 = document.createElement("div");
     v2.id = "cyberOverlay";
     v2.style.cssText = `
-            position:fixed;
-            inset:0;
-            background:rgba(0,0,0,0.85);
-            backdrop-filter:blur(12px);
-            z-index:999998;
-            display:none;
-            align-items:center;
-            justify-content:center;
-            color:#00f7ff;
-            font-family:'Orbitron',sans-serif;
-            text-shadow:0 0 10px #00f7ff;
-        `;
+        position:fixed;
+        inset:0;
+        background:rgba(235, 230, 222, 0.88);
+        backdrop-filter:blur(8px);
+        z-index:999998;
+        display:none;
+        align-items:center;
+        justify-content:center;
+        color:#7d7265;
+        font-family:Arial,sans-serif;
+    `;
     v2.innerHTML = `
         <div id="overlay-status-container">
             <div id="overlay-live-status">INITIALIZING...</div>
-            <h1 style="font-size:24px;letter-spacing:8px;margin:0;opacity:0.6;">SYSTEM ACTIVE</h1>
+            <h1 style="font-size:22px;letter-spacing:6px;margin:0;opacity:0.6;color:#554e44;">SYSTEM ACTIVE</h1>
         </div>`;
     document.body.appendChild(v2);
   }
   const v3 = document.getElementById("overlay-live-status");
-
   let v4 = document.getElementById("cyberPanel");
   if (!v4) {
     v4 = document.createElement("div");
     v4.id = "cyberPanel";
     v4.innerHTML = `
         <div class="cyber-header">
-          <div class="panel-title">
-            <span class="crystal-icon"></span>
-            AUTO BUY PANEL
-            <span class="crystal-icon"></span>
-          </div>
-        </div>
+            <div class="cyber-header-badge">⚡</div>
+            <div class="cyber-header-title">
+                <span>⚡</span> AUTO BUY PANEL
+            </div>
+        </div> 
+    
+        <div class="cyber-body"> 
+            <div>
+                <label class="cyber-label">Payment Type</label>
+                <div class="toggle-container" id="orderTypeToggle">
+                    <div class="toggle-option active" data-value="1">UPI</div>
+                    <div class="toggle-option" data-value="2">BANK</div>
+                </div>
+            </div>
 
-        <div class="cyber-label">Payment Type</div>
-        <div class="payment-grid" id="orderTypeToggle">
-          <div class="futuristic-btn active" data-value="1">UPI</div>
-          <div class="futuristic-btn" data-value="2">BANK</div>
-        </div>
-
-        <div class="amount-box">
-          <div class="cyber-label">Amount</div>
-          <div class="input-wrapper">
-            <input 
-              type="text" 
-              id="buyAmount" 
-              value="1000"
-              min="1" 
-              oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-            >
-          </div>
-        </div>
-
-        <div class="action-grid">
-          <button id="startBtn" class="action-btn btn-start">START</button>
-          <button id="stopBtn" class="action-btn btn-stop">STOP</button>
-        </div>
-
-        <div class="status-box" id="cyberStatus">
-          Ready
+            <div>
+                <label class="cyber-label">Amount</label> 
+                <input 
+                    type="text" 
+                    id="buyAmount" 
+                    class="cyber-input" 
+                    value="1000"
+                    min="1" 
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                > 
+            </div>
+    
+            <div class="cyber-buttons"> 
+                <button id="startBtn" class="cyber-btn start-btn">START</button> 
+                <button id="stopBtn" class="cyber-btn stop-btn">STOP</button> 
+            </div> 
+    
+            <div class="cyber-status" id="cyberStatus">Ready</div> 
         </div>`;
     document.body.appendChild(v4);
   }
-
   const v5 = document.getElementById("cyberStatus");
   const v6 = document.getElementById("startBtn");
   const v7 = document.getElementById("stopBtn");
@@ -301,7 +291,7 @@
   let vLN1 = 1;
   let v11 = false;
 
-  v9.querySelectorAll(".futuristic-btn").forEach(p => {
+  v9.querySelectorAll(".toggle-option").forEach(p => {
     p.onclick = () => {
       v9.querySelector(".active").classList.remove("active");
       p.classList.add("active");
@@ -316,29 +306,22 @@
       v5.innerText = p2;
       const v12 = /denied|not found|Error|Stopped|🔴/i.test(p2);
       const v13 = /SUCCESS|🟢/i.test(p2);
-
       if (v12) {
-        v5.style.color = "#ef4444";
-        v5.style.borderColor = "#ef4444";
-        v5.style.boxShadow = "0 0 15px rgba(239, 68, 68, 0.25), inset 0 0 15px rgba(239, 68, 68, 0.2)";
-        v5.style.background = "rgba(239, 68, 68, 0.1)";
+        v5.style.color = "#ba5d58";
+        v5.style.border = "1px solid rgba(186, 93, 88, 0.3)";
       } else if (v13) {
-        v5.style.color = "#00ffaa";
-        v5.style.borderColor = "#00ffaa";
-        v5.style.boxShadow = "0 0 15px rgba(0, 255, 170, 0.25), inset 0 0 15px rgba(0, 255, 170, 0.2)";
-        v5.style.background = "rgba(0, 255, 170, 0.1)";
+        v5.style.color = "#3d8573";
+        v5.style.border = "1px solid rgba(61, 133, 115, 0.4)";
       } else {
-        v5.style.color = "#00f0ff";
-        v5.style.borderColor = "#00f0ff";
-        v5.style.boxShadow = "0 0 15px rgba(0, 240, 255, 0.2)";
-        v5.style.background = "rgba(0, 240, 255, 0.05)";
+        v5.style.color = "#7d7265";
+        v5.style.border = "none";
       }
     }
     if (v3) {
       v3.innerText = p2;
       const v14 = /denied|not found|Error|Stopped|🔴/i.test(p2);
-      v3.style.color = v14 ? "#ef4444" : "#00ffaa";
-      v3.style.textShadow = v14 ? "0 0 10px #ef4444aa" : "0 0 10px #00ffaaaa";
+      v3.style.color = v14 ? "#ba5d58" : "#3d8573";
+      v3.style.textShadow = v14 ? "0 0 10px rgba(186, 93, 88, 0.4)" : "0 0 10px rgba(61, 133, 115, 0.4)";
     }
   }
 
@@ -379,9 +362,8 @@
     const v19 = v18.allowed;
     v11 = v18.isPremium;
     f7();
-
     if (!v19) {
-      f("Access Denied");
+      f("Access denied");
       return;
     }
 
@@ -419,7 +401,6 @@
         v17 = v20;
       }
     }
-
     if (!v17 && window.token?.value) {
       v17 = window.token.value;
     }
@@ -428,7 +409,7 @@
   }
 
   if (!v17) {
-    f("Token Not Found");
+    f("Token not found");
     return;
   }
 
@@ -454,12 +435,10 @@
       f("Enter amount");
       return;
     }
-
     if (!v11 && vNumber2 < 1000) {
       f("Minimum order value is 1000");
       return;
     }
-
     v10 = true;
     v2.style.display = "flex";
     f("🟢 Running | Amount ₹" + vNumber2);
@@ -504,7 +483,6 @@
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
         f("Checking " + v24 + " orders for ₹" + p10 + "...");
-
         const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
@@ -513,48 +491,40 @@
             pageNo: 1
           })
         });
-
         const v26 = await v25.json();
         const v27 = v26?.data?.list || [];
-
         if (!v27.length) {
           f("No orders found...");
           await f3(300);
           continue;
         }
-
         const v28 = v27.filter(p12 => Number(p12.amount) === p10);
         if (!v28.length) {
           f("Waiting for order ₹" + p10);
           await f3(300);
           continue;
         }
-
         for (const v29 of v28) {
           if (!v10) {
             break;
           }
           f("Trying ₹" + v29.amount);
-
           const vO2 = {
             amount: v29.amount,
             platformOrder: v29.platformOrder,
             payType: v29.payType,
             orderType: v29.orderType
           };
-
           try {
             const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify(vO2)
             });
-
             const v31 = await v30.json();
             if (v31.code !== "1") {
               continue;
             }
-
             const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
@@ -567,7 +537,6 @@
                 buyerKycId: ""
               })
             });
-
             const v33 = await v32.json();
             if (v33.code === "1" || v33.msg === "Success") {
               f("SUCCESS ₹" + v29.amount);
@@ -592,31 +561,23 @@
       const v34 = JSON.parse(localStorage.getItem("userInfo"));
       const v35 = v34?.value?.memberId || v34?.value?.memberld;
       const v36 = v34?.balance ?? v34?.value?.balance;
-
       if (!v35 || v36 === undefined || v36 === null) {
         return;
       }
-
       const v37 = firebase.firestore();
       const v38 = await v37.collection("members").where("walletUserId", "==", String(v35)).limit(1).get();
-
       if (v38.empty) {
         return;
       }
-
       const v39 = v38.docs[0];
       const v40 = v37.collection("members").doc(v39.id);
       const v41 = v39.data();
-
       const vNumber3 = Number(v41.balance ?? 0);
       const vNumber4 = Number(v36);
-
       if (vNumber3 === vNumber4) {
         return;
       }
-
       const v42 = vNumber4 - vNumber3;
-
       await v37.collection("transactions").add({
         walletUserId: String(v35),
         previousBalance: vNumber3,
@@ -625,7 +586,6 @@
         type: v42 > 0 ? "credit" : "debit",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-
       await v40.update({
         balance: vNumber4,
         balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -647,23 +607,19 @@
     try {
       const v43 = JSON.parse(localStorage.getItem("userInfo"));
       const v44 = v43?.value?.memberId || v43?.value?.memberld;
-
       if (!v44) {
         return {
           allowed: false,
           isPremium: false
         };
       }
-
       const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
-
       if (v45.empty) {
         return {
           allowed: false,
           isPremium: false
         };
       }
-
       const v46 = v45.docs[0].data();
       return {
         allowed: true,
@@ -677,4 +633,4 @@
     }
   }
 })();
-      
+    
