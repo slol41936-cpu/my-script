@@ -1,13 +1,242 @@
 (async function () {
   const v = document.createElement("style");
-  v.innerHTML = "\n    #cyberPanel{ \n        position:fixed; \n        right:20px; \n        bottom:20px; \n        width:280px; \n        z-index:999999; \n        background:rgba(10, 15, 31, 0.9); \n        border:1px solid #00f7ff33; \n        border-radius:16px; \n        backdrop-filter:blur(16px); \n        box-shadow: \n            0 8px 32px rgba(0, 0, 0, 0.4),\n            0 0 15px #00f7ff22; \n        overflow:hidden; \n        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; \n    } \n    \n    .cyber-header{ \n        padding:10px 15px; \n        background:linear-gradient(90deg,#00f7ff15,#7a00ff15); \n        color:#00f7ff; \n        font-size: 11px;\n        letter-spacing: 1px;\n        font-weight:bold; \n        text-align:center; \n        cursor:move; \n        border-bottom:1px solid #00f7ff22; \n        user-select:none;\n        text-transform: uppercase;\n    } \n    \n    .cyber-body{ \n        padding:15px; \n    } \n    \n    .cyber-label{ \n        color:#8defff; \n        font-size:10px; \n        margin-bottom:6px; \n        display:block; \n        text-transform: uppercase;\n        letter-spacing: 0.5px;\n        opacity: 0.8;\n    } \n    \n    .cyber-input{ \n        width:100%; \n        box-sizing:border-box; \n        padding:8px 12px; \n        background:rgba(17, 24, 39, 0.5); \n        border:1px solid #00f7ff33; \n        border-radius:10px; \n        color:#fff; \n        font-size:14px; \n        outline:none; \n        transition: all 0.3s ease;\n    } \n    \n    .cyber-input:focus{ \n        border-color: #00f7ff88;\n        box-shadow:0 0 12px #00f7ff33; \n    } \n    \n    .cyber-buttons{ \n        display:flex; \n        gap:10px; \n        margin-top:12px; \n    } \n    \n    .cyber-btn{ \n        flex:1; \n        border:none; \n        padding:8px; \n        border-radius:8px; \n        cursor:pointer; \n        font-size: 11px;\n        font-weight:bold; \n        transition:all .2s ease; \n        text-transform: uppercase;\n        letter-spacing: 0.5px;\n    } \n    \n    .start-btn{ \n        background:#00f7ff; \n        color:#000; \n    } \n    \n    .start-btn:hover{ \n        transform:translateY(-1px); \n        box-shadow:0 0 12px #00f7ff88; \n    } \n    \n    .stop-btn{ \n        background:rgba(255, 45, 85, 0.2); \n        color:#ff2d55; \n        border: 1px solid #ff2d5544;\n    } \n    \n    .stop-btn:hover{ \n        background:rgba(255, 45, 85, 0.3); \n        transform:translateY(-1px); \n        box-shadow:0 0 12px #ff2d5533; \n    } \n    \n    .cyber-status{ \n        margin-top:12px; \n        background:rgba(17, 24, 39, 0.6); \n        border-radius:10px; \n        padding:8px 12px; \n        display: flex;\n        align-items: center;\n        justify-content: center;\n        text-align:center; \n        color:#00ff95; \n        font-size:11px; \n        border:1px solid #00ff9533; \n        min-height: 36px;\n        box-shadow: inset 0 0 5px #00ff9511;\n        text-transform: uppercase;\n        letter-spacing: 0.3px;\n        transition: all 0.3s ease;\n    } \n\n    /* Toggle Switch Styles */\n    .toggle-container {\n        display: flex;\n        background: #111827;\n        border: 1px solid #00f7ff33;\n        border-radius: 10px;\n        margin-bottom: 12px;\n        padding: 3px;\n        gap: 3px;\n    }\n\n    .toggle-option {\n        flex: 1;\n        padding: 6px;\n        text-align: center;\n        color: #8defff;\n        font-size: 11px;\n        font-weight: bold;\n        cursor: pointer;\n        border-radius: 6px;\n        transition: .3s;\n        user-select: none;\n    }\n\n    .toggle-option.active {\n        background: #00f7ff;\n        color: #000;\n        box-shadow: 0 0 8px #00f7ff66;\n    }\n\n    #overlay-status-container {\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        gap: 15px;\n    }\n\n    #overlay-live-status {\n        font-size: 18px;\n        color: #00ff95;\n        text-transform: uppercase;\n        letter-spacing: 1.5px;\n        margin-bottom: 5px;\n        text-shadow: 0 0 10px #00ff95aa;\n    }\n    ";
+  v.innerHTML = `
+    #cyberPanel {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        width: 280px;
+        z-index: 999999;
+        background: #f0ebe4;
+        border-radius: 22px;
+        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
+        box-shadow: 
+            0 20px 45px rgba(0, 0, 0, 0.25),
+            0 8px 16px rgba(0, 0, 0, 0.15),
+            0 0 20px rgba(197, 160, 89, 0.15),
+            inset 0 1px 1px rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        user-select: none;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
+    #cyberPanel:hover {
+        box-shadow: 
+            0 25px 50px rgba(0, 0, 0, 0.3),
+            0 10px 20px rgba(0, 0, 0, 0.18),
+            0 0 25px rgba(197, 160, 89, 0.25),
+            inset 0 1px 1px rgba(255, 255, 255, 1);
+    }
+
+    .cyber-header {
+        padding: 10px 14px 4px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: move;
+    }
+
+    .cyber-header-badge {
+        width: 26px;
+        height: 26px;
+        background: radial-gradient(circle at 35% 35%, #ebd7b7, #bfa37b, #8a704c);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 5px rgba(0,0,0,0.2);
+        color: #fff;
+        font-size: 11px;
+    }
+
+    .cyber-header-title {
+        color: #7d7265;
+        font-size: 11px;
+        letter-spacing: 0.8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .cyber-header-title span {
+        color: #c5a059;
+    }
+
+    .cyber-body {
+        padding: 8px 14px 14px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .cyber-label {
+        color: #9d9489;
+        font-size: 10px;
+        font-weight: 700;
+        margin-bottom: 2px;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Toggle Buttons */
+    .toggle-container {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 6px;
+    }
+
+    .toggle-option {
+        padding: 7px 0;
+        text-align: center;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #ded7ce;
+        color: #8c8378;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .toggle-option.active {
+        background: #509796;
+        color: #ffffff;
+        box-shadow: 
+            0 0 0 1.5px rgba(226, 177, 89, 0.9),
+            0 4px 10px rgba(80, 151, 150, 0.4);
+    }
+
+    /* Input Field */
+    .cyber-input {
+        width: 100%;
+        box-sizing: border-box;
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        background: repeating-linear-gradient(
+            -45deg,
+            #ebe4dc,
+            #ebe4dc 4px,
+            #e5ded5 4px,
+            #e5ded5 8px
+        );
+        box-shadow: inset 1px 2px 4px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8);
+        color: #554e44;
+        font-size: 13px;
+        font-weight: 700;
+        outline: none;
+    }
+
+    /* Action Buttons */
+    .cyber-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 2px;
+    }
+
+    .cyber-btn {
+        height: 34px;
+        border: none;
+        border-radius: 17px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 800;
+        transition: all .2s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .start-btn {
+        background: #54748b;
+        color: #ffffff;
+        border: 1.2px solid #d1b480;
+        box-shadow: 0 4px 10px rgba(84, 116, 139, 0.35);
+    }
+
+    .start-btn:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    .stop-btn {
+        background: #b55e65;
+        color: #ffd2d5;
+        box-shadow: 
+            0 0 0 1.2px rgba(225, 102, 102, 0.5),
+            0 4px 10px rgba(181, 94, 101, 0.35);
+    }
+
+    .stop-btn:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    /* Status Indicator */
+    .cyber-status {
+        margin-top: 2px;
+        background: #ded7cd;
+        border-radius: 10px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #ba5d58;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
+        transition: all 0.3s ease;
+    }
+
+    #overlay-status-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    #overlay-live-status {
+        font-size: 18px;
+        color: #509796;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 5px;
+        text-shadow: 0 0 10px rgba(80, 151, 150, 0.5);
+    }
+  `;
   document.head.appendChild(v);
+
   let v2 = document.getElementById("cyberOverlay");
   if (!v2) {
     v2 = document.createElement("div");
     v2.id = "cyberOverlay";
-    v2.style.cssText = "\n            position:fixed;\n            inset:0;\n            background:rgba(0,0,0,0.85);\n            backdrop-filter:blur(12px);\n            z-index:999998;\n            display:none;\n            align-items:center;\n            justify-content:center;\n            color:#00f7ff;\n            font-family:Arial,sans-serif;\n            text-shadow:0 0 10px #00f7ff;\n        ";
-    v2.innerHTML = "\n        <div id=\"overlay-status-container\">\n            <div id=\"overlay-live-status\">INITIALIZING...</div>\n            <h1 style=\"font-size:24px;letter-spacing:8px;margin:0;opacity:0.6;\">SYSTEM ACTIVE</h1>\n        </div>";
+    v2.style.cssText = `
+        position:fixed;
+        inset:0;
+        background:rgba(235, 230, 222, 0.88);
+        backdrop-filter:blur(8px);
+        z-index:999998;
+        display:none;
+        align-items:center;
+        justify-content:center;
+        color:#7d7265;
+        font-family:Arial,sans-serif;
+    `;
+    v2.innerHTML = `
+        <div id="overlay-status-container">
+            <div id="overlay-live-status">INITIALIZING...</div>
+            <h1 style="font-size:22px;letter-spacing:6px;margin:0;opacity:0.6;color:#554e44;">SYSTEM ACTIVE</h1>
+        </div>`;
     document.body.appendChild(v2);
   }
   const v3 = document.getElementById("overlay-live-status");
@@ -15,7 +244,42 @@
   if (!v4) {
     v4 = document.createElement("div");
     v4.id = "cyberPanel";
-    v4.innerHTML = "\n        <div class=\"cyber-header\"> \n            ⚡ AUTO BUY PANEL \n        </div> \n    \n        <div class=\"cyber-body\"> \n            \n            <label class=\"cyber-label\"> \n                Payment Type \n            </label>\n            <div class=\"toggle-container\" id=\"orderTypeToggle\">\n                <div class=\"toggle-option active\" data-value=\"1\">UPI</div>\n                <div class=\"toggle-option\" data-value=\"2\">BANK</div>\n            </div>\n\n            <label class=\"cyber-label\"> \n                Amount \n            </label> \n    \n            <input \n                type=\"text\" \n                id=\"buyAmount\" \n                class=\"cyber-input\" \n                value=\"1000\"\n                min=\"1\" \n                oninput=\"this.value=this.value.replace(/[^0-9]/g,'')\"\n            > \n    \n            <div class=\"cyber-buttons\"> \n                <button \n                    id=\"startBtn\" \n                    class=\"cyber-btn start-btn\" \n                > \n                    START \n                </button> \n    \n                <button \n                    id=\"stopBtn\" \n                    class=\"cyber-btn stop-btn\" \n                > \n                    STOP \n                </button> \n            </div> \n    \n            <div \n                class=\"cyber-status\" \n                id=\"cyberStatus\" \n            > \n                Ready \n            </div> \n    \n        </div>";
+    v4.innerHTML = `
+        <div class="cyber-header">
+            <div class="cyber-header-badge">⚡</div>
+            <div class="cyber-header-title">
+                <span>⚡</span> AUTO BUY PANEL
+            </div>
+        </div> 
+    
+        <div class="cyber-body"> 
+            <div>
+                <label class="cyber-label">Payment Type</label>
+                <div class="toggle-container" id="orderTypeToggle">
+                    <div class="toggle-option active" data-value="1">UPI</div>
+                    <div class="toggle-option" data-value="2">BANK</div>
+                </div>
+            </div>
+
+            <div>
+                <label class="cyber-label">Amount</label> 
+                <input 
+                    type="text" 
+                    id="buyAmount" 
+                    class="cyber-input" 
+                    value="1000"
+                    min="1" 
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                > 
+            </div>
+    
+            <div class="cyber-buttons"> 
+                <button id="startBtn" class="cyber-btn start-btn">START</button> 
+                <button id="stopBtn" class="cyber-btn stop-btn">STOP</button> 
+            </div> 
+    
+            <div class="cyber-status" id="cyberStatus">Ready</div> 
+        </div>`;
     document.body.appendChild(v4);
   }
   const v5 = document.getElementById("cyberStatus");
@@ -26,6 +290,7 @@
   let v10 = false;
   let vLN1 = 1;
   let v11 = false;
+
   v9.querySelectorAll(".toggle-option").forEach(p => {
     p.onclick = () => {
       v9.querySelector(".active").classList.remove("active");
@@ -34,6 +299,7 @@
       console.log("Selected Order Type:", vLN1 === 1 ? "UPI" : "BANK");
     };
   });
+
   function f(p2) {
     console.log(p2);
     if (v5) {
@@ -41,26 +307,24 @@
       const v12 = /denied|not found|Error|Stopped|🔴/i.test(p2);
       const v13 = /SUCCESS|🟢/i.test(p2);
       if (v12) {
-        v5.style.color = "#ff2d55";
-        v5.style.borderColor = "#ff2d5544";
-        v5.style.boxShadow = "inset 0 0 5px #ff2d5511";
+        v5.style.color = "#ba5d58";
+        v5.style.border = "1px solid rgba(186, 93, 88, 0.3)";
       } else if (v13) {
-        v5.style.color = "#00ff95";
-        v5.style.borderColor = "#00ff9544";
-        v5.style.boxShadow = "inset 0 0 5px #00ff9511";
+        v5.style.color = "#3d8573";
+        v5.style.border = "1px solid rgba(61, 133, 115, 0.4)";
       } else {
-        v5.style.color = "#00f7ff";
-        v5.style.borderColor = "#00f7ff33";
-        v5.style.boxShadow = "inset 0 0 5px #00f7ff11";
+        v5.style.color = "#7d7265";
+        v5.style.border = "none";
       }
     }
     if (v3) {
       v3.innerText = p2;
       const v14 = /denied|not found|Error|Stopped|🔴/i.test(p2);
-      v3.style.color = v14 ? "#ff2d55" : "#00ff95";
-      v3.style.textShadow = v14 ? "0 0 10px #ff2d55aa" : "0 0 10px #00ff95aa";
+      v3.style.color = v14 ? "#ba5d58" : "#3d8573";
+      v3.style.textShadow = v14 ? "0 0 10px rgba(186, 93, 88, 0.4)" : "0 0 10px rgba(61, 133, 115, 0.4)";
     }
   }
+
   async function f2(p3) {
     return new Promise((p4, p5) => {
       const v15 = document.createElement("script");
@@ -70,10 +334,12 @@
       document.head.appendChild(v15);
     });
   }
+
   if (!window.firebase) {
     await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
     await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
   }
+
   if (!firebase.apps.length) {
     firebase.initializeApp({
       apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
@@ -84,10 +350,12 @@
       appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
     });
   }
+
   let v16 = null;
   function f3(p6) {
     return new Promise(p7 => setTimeout(p7, p6));
   }
+
   let v17 = null;
   try {
     const v18 = await f8();
@@ -98,6 +366,7 @@
       f("Access denied");
       return;
     }
+
     function f4() {
       const vNumber = Number(v8.value);
       if (!v11) {
@@ -116,11 +385,14 @@
         v6.style.cursor = "pointer";
       }
     }
+
     if (!v11) {
       v8.value = "1000";
     }
+
     v8.addEventListener("input", f4);
     f4();
+
     const v20 = localStorage.getItem("token");
     if (v20) {
       try {
@@ -135,12 +407,15 @@
   } catch (e) {
     console.log(e);
   }
+
   if (!v17) {
     f("Token not found");
     return;
   }
+
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
+
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -150,6 +425,7 @@
     page: "Arb",
     deviceCode: v21
   };
+
   v6.onclick = () => {
     if (v10) {
       return;
@@ -168,24 +444,29 @@
     f("🟢 Running | Amount ₹" + vNumber2);
     f5(vNumber2, vLN1);
   };
+
   v7.onclick = () => {
     v10 = false;
     v2.style.display = "none";
     f("🔴 Stopped");
   };
+
   (function () {
     const v22 = v4.querySelector(".cyber-header");
     let v23 = false;
     let vLN0 = 0;
     let vLN02 = 0;
+
     v22.addEventListener("mousedown", p8 => {
       v23 = true;
       vLN0 = p8.clientX - v4.offsetLeft;
       vLN02 = p8.clientY - v4.offsetTop;
     });
+
     document.addEventListener("mouseup", () => {
       v23 = false;
     });
+
     document.addEventListener("mousemove", p9 => {
       if (!v23) {
         return;
@@ -196,6 +477,7 @@
       v4.style.bottom = "auto";
     });
   })();
+
   async function f5(p10, p11) {
     while (v10) {
       try {
@@ -273,6 +555,7 @@
       }
     }
   }
+
   async function f6() {
     try {
       const v34 = JSON.parse(localStorage.getItem("userInfo"));
@@ -311,6 +594,7 @@
       console.error("Balance sync error:", e4);
     }
   }
+
   function f7() {
     if (v16) {
       return;
@@ -318,6 +602,7 @@
     f6();
     v16 = setInterval(f6, 15000);
   }
+
   async function f8() {
     try {
       const v43 = JSON.parse(localStorage.getItem("userInfo"));
@@ -348,3 +633,4 @@
     }
   }
 })();
+  
