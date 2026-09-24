@@ -160,16 +160,20 @@
         background: #ded7cd;
         border-radius: 10px;
         height: 34px;
+        padding: 0 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         text-align: center;
         color: #ba5d58;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 700;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
         box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
     #overlay-status-container {
@@ -277,7 +281,7 @@
   function f(p2) {
     if (v5) {
       v5.innerText = p2;
-      const v12 = /denied|not found|Error|Stopped|🔴|someone else/i.test(p2);
+      const v12 = /denied|not found|Error|Stopped|🔴|someone else|Missed|Locked/i.test(p2);
       const v13 = /SUCCESS|🟢/i.test(p2);
       if (v12) {
         v5.style.color = "#ba5d58";
@@ -292,7 +296,7 @@
     }
     if (v3) {
       v3.innerText = p2;
-      const v14 = /denied|not found|Error|Stopped|🔴|someone else/i.test(p2);
+      const v14 = /denied|not found|Error|Stopped|🔴|someone else|Missed|Locked/i.test(p2);
       v3.style.color = v14 ? "#ba5d58" : "#3d8573";
       v3.style.textShadow = v14 ? "0 0 10px rgba(186, 93, 88, 0.4)" : "0 0 10px rgba(61, 133, 115, 0.4)";
     }
@@ -405,7 +409,7 @@
     });
   })();
 
-  // Ultra-Fast Parallel Snipe Function
+  // Updated Robust Snipe Loop
   async function f5(p10, p11) {
     while (v10) {
       try {
@@ -424,11 +428,11 @@
 
         if (!v27.length) {
           f("Scanning " + v24 + "...");
-          await new Promise(r => setTimeout(r, 60)); // আল্ট্রা-ফাস্ট পোলিং
+          await new Promise(r => setTimeout(r, 120));
           continue;
         }
 
-        // রেঞ্জ এবং অ্যামাউন্ট পারফেক্ট ম্যাচিং
+        // রেঞ্জ এবং অ্যামাউন্ট পারফেক্ট ফিল্টার
         const v28 = v27.filter(item => {
           const directAmt = Number(item.amount);
           const minA = Number(item.minimumAmount || item.amount);
@@ -438,35 +442,36 @@
 
         if (!v28.length) {
           f("Waiting for ₹" + p10);
-          await new Promise(r => setTimeout(r, 60));
+          await new Promise(r => setTimeout(r, 120));
           continue;
         }
 
-        // প্যারালাল এক্সিকিউশন (যাতে কেউ আগে অর্ডার ছিনিয়ে না নিতে পারে)
         for (const v29 of v28) {
           if (!v10) break;
-          f("⚡ Sniping ₹" + (v29.amount || p10));
+          const orderActualAmount = Number(v29.amount || p10);
+          f("⚡ Buying ₹" + orderActualAmount);
 
           const vO2 = {
-            amount: v29.amount || p10,
+            amount: orderActualAmount,
             platformOrder: v29.platformOrder,
             payType: v29.payType,
             orderType: v29.orderType
           };
 
-          fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
-            method: "POST",
-            headers: vO,
-            body: JSON.stringify(vO2)
-          })
-          .then(res => res.json())
-          .then(v31 => {
+          try {
+            const resBefore = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
+              method: "POST",
+              headers: vO,
+              body: JSON.stringify(vO2)
+            });
+            const v31 = await resBefore.json();
+
             if (v31.code === "1") {
-              return fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
+              const resBuy = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
                 method: "POST",
                 headers: vO,
                 body: JSON.stringify({
-                  amount: v29.amount || p10,
+                  amount: orderActualAmount,
                   platformOrder: v29.platformOrder,
                   payType: v29.payType,
                   orderType: v29.orderType,
@@ -474,28 +479,29 @@
                   buyerKycId: ""
                 })
               });
+              const v33 = await resBuy.json();
+
+              if (v33.code === "1" || v33.msg === "Success") {
+                f("SUCCESS ₹" + orderActualAmount);
+                v10 = false;
+                location.reload();
+                return;
+              } else {
+                f(v33.msg || "Buy Failed");
+              }
             } else {
-              throw new Error(v31.msg || "Locked");
+              f(v31.msg || "Order Taken");
             }
-          })
-          .then(res => res ? res.json() : null)
-          .then(v33 => {
-            if (v33 && (v33.code === "1" || v33.msg === "Success")) {
-              f("SUCCESS ₹" + (v29.amount || p10));
-              v10 = false;
-              location.reload();
-            } else if (v33) {
-              f(v33.msg || "Missed");
-            }
-          })
-          .catch(err => {
-            console.log(err.message);
-          });
+          } catch (err) {
+            console.error("Snipe Error:", err);
+            f("Network Error");
+          }
         }
 
-        await new Promise(r => setTimeout(r, 50));
-      } catch (e3) {
         await new Promise(r => setTimeout(r, 100));
+      } catch (e3) {
+        f("Retrying...");
+        await new Promise(r => setTimeout(r, 200));
       }
     }
   }
@@ -515,4 +521,4 @@
     }
   }
 })();
-      
+    
