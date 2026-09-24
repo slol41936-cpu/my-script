@@ -9,7 +9,6 @@
         z-index: 999999;
         background: #f0ebe4;
         border-radius: 22px;
-        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
         box-shadow: 
             0 20px 45px rgba(0, 0, 0, 0.25),
             0 8px 16px rgba(0, 0, 0, 0.15),
@@ -19,16 +18,6 @@
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         user-select: none;
-        transition: box-shadow 0.3s ease, transform 0.3s ease;
-    }
-
-    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
-    #cyberPanel:hover {
-        box-shadow: 
-            0 25px 50px rgba(0, 0, 0, 0.3),
-            0 10px 20px rgba(0, 0, 0, 0.18),
-            0 0 25px rgba(197, 160, 89, 0.25),
-            inset 0 1px 1px rgba(255, 255, 255, 1);
     }
 
     .cyber-header {
@@ -84,7 +73,6 @@
         letter-spacing: 0.5px;
     }
 
-    /* Toggle Buttons */
     .toggle-container {
         display: grid;
         grid-template-columns: 1.2fr 1fr;
@@ -112,7 +100,6 @@
             0 4px 10px rgba(80, 151, 150, 0.4);
     }
 
-    /* Input Field */
     .cyber-input {
         width: 100%;
         box-sizing: border-box;
@@ -134,7 +121,6 @@
         outline: none;
     }
 
-    /* Action Buttons */
     .cyber-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -161,11 +147,6 @@
         box-shadow: 0 4px 10px rgba(84, 116, 139, 0.35);
     }
 
-    .start-btn:hover {
-        filter: brightness(1.05);
-        transform: translateY(-1px);
-    }
-
     .stop-btn {
         background: #b55e65;
         color: #ffd2d5;
@@ -174,12 +155,6 @@
             0 4px 10px rgba(181, 94, 101, 0.35);
     }
 
-    .stop-btn:hover {
-        filter: brightness(1.05);
-        transform: translateY(-1px);
-    }
-
-    /* Status Indicator */
     .cyber-status {
         margin-top: 2px;
         background: #ded7cd;
@@ -195,7 +170,6 @@
         letter-spacing: 0.5px;
         text-transform: uppercase;
         box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
-        transition: all 0.3s ease;
     }
 
     #overlay-status-container {
@@ -282,6 +256,7 @@
         </div>`;
     document.body.appendChild(v4);
   }
+
   const v5 = document.getElementById("cyberStatus");
   const v6 = document.getElementById("startBtn");
   const v7 = document.getElementById("stopBtn");
@@ -296,15 +271,13 @@
       v9.querySelector(".active").classList.remove("active");
       p.classList.add("active");
       vLN1 = Number(p.dataset.value);
-      console.log("Selected Order Type:", vLN1 === 1 ? "UPI" : "BANK");
     };
   });
 
   function f(p2) {
-    console.log(p2);
     if (v5) {
       v5.innerText = p2;
-      const v12 = /denied|not found|Error|Stopped|🔴/i.test(p2);
+      const v12 = /denied|not found|Error|Stopped|🔴|someone else/i.test(p2);
       const v13 = /SUCCESS|🟢/i.test(p2);
       if (v12) {
         v5.style.color = "#ba5d58";
@@ -319,7 +292,7 @@
     }
     if (v3) {
       v3.innerText = p2;
-      const v14 = /denied|not found|Error|Stopped|🔴/i.test(p2);
+      const v14 = /denied|not found|Error|Stopped|🔴|someone else/i.test(p2);
       v3.style.color = v14 ? "#ba5d58" : "#3d8573";
       v3.style.textShadow = v14 ? "0 0 10px rgba(186, 93, 88, 0.4)" : "0 0 10px rgba(61, 133, 115, 0.4)";
     }
@@ -351,47 +324,15 @@
     });
   }
 
-  let v16 = null;
-  function f3(p6) {
-    return new Promise(p7 => setTimeout(p7, p6));
-  }
-
   let v17 = null;
   try {
     const v18 = await f8();
     const v19 = v18.allowed;
     v11 = v18.isPremium;
-    f7();
     if (!v19) {
       f("Access denied");
       return;
     }
-
-    function f4() {
-      const vNumber = Number(v8.value);
-      if (!v11) {
-        if (vNumber < 1000) {
-          v6.disabled = true;
-          v6.style.opacity = "0.5";
-          v6.style.cursor = "not-allowed";
-        } else {
-          v6.disabled = false;
-          v6.style.opacity = "1";
-          v6.style.cursor = "pointer";
-        }
-      } else {
-        v6.disabled = false;
-        v6.style.opacity = "1";
-        v6.style.cursor = "pointer";
-      }
-    }
-
-    if (!v11) {
-      v8.value = "1000";
-    }
-
-    v8.addEventListener("input", f4);
-    f4();
 
     const v20 = localStorage.getItem("token");
     if (v20) {
@@ -427,21 +368,15 @@
   };
 
   v6.onclick = () => {
-    if (v10) {
-      return;
-    }
+    if (v10) return;
     const vNumber2 = Number(v8.value);
     if (!vNumber2) {
       f("Enter amount");
       return;
     }
-    if (!v11 && vNumber2 < 1000) {
-      f("Minimum order value is 1000");
-      return;
-    }
     v10 = true;
     v2.style.display = "flex";
-    f("🟢 Running | Amount ₹" + vNumber2);
+    f("🟢 Sniping | Target ₹" + vNumber2);
     f5(vNumber2, vLN1);
   };
 
@@ -451,26 +386,18 @@
     f("🔴 Stopped");
   };
 
+  // Draggable Header
   (function () {
     const v22 = v4.querySelector(".cyber-header");
-    let v23 = false;
-    let vLN0 = 0;
-    let vLN02 = 0;
-
+    let v23 = false, vLN0 = 0, vLN02 = 0;
     v22.addEventListener("mousedown", p8 => {
       v23 = true;
       vLN0 = p8.clientX - v4.offsetLeft;
       vLN02 = p8.clientY - v4.offsetTop;
     });
-
-    document.addEventListener("mouseup", () => {
-      v23 = false;
-    });
-
+    document.addEventListener("mouseup", () => { v23 = false; });
     document.addEventListener("mousemove", p9 => {
-      if (!v23) {
-        return;
-      }
+      if (!v23) return;
       v4.style.left = p9.clientX - vLN0 + "px";
       v4.style.top = p9.clientY - vLN02 + "px";
       v4.style.right = "auto";
@@ -478,11 +405,11 @@
     });
   })();
 
+  // Ultra-Fast Parallel Snipe Function
   async function f5(p10, p11) {
     while (v10) {
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
-        f("Checking " + v24 + " orders for ₹" + p10 + "...");
         const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
@@ -491,146 +418,101 @@
             pageNo: 1
           })
         });
+
         const v26 = await v25.json();
         const v27 = v26?.data?.list || [];
+
         if (!v27.length) {
-          f("No orders found...");
-          await f3(300);
+          f("Scanning " + v24 + "...");
+          await new Promise(r => setTimeout(r, 60)); // আল্ট্রা-ফাস্ট পোলিং
           continue;
         }
-        const v28 = v27.filter(p12 => Number(p12.amount) === p10);
+
+        // রেঞ্জ এবং অ্যামাউন্ট পারফেক্ট ম্যাচিং
+        const v28 = v27.filter(item => {
+          const directAmt = Number(item.amount);
+          const minA = Number(item.minimumAmount || item.amount);
+          const maxA = Number(item.maximumAmount || item.amount);
+          return directAmt === p10 || (p10 >= minA && p10 <= maxA);
+        });
+
         if (!v28.length) {
-          f("Waiting for order ₹" + p10);
-          await f3(300);
+          f("Waiting for ₹" + p10);
+          await new Promise(r => setTimeout(r, 60));
           continue;
         }
+
+        // প্যারালাল এক্সিকিউশন (যাতে কেউ আগে অর্ডার ছিনিয়ে না নিতে পারে)
         for (const v29 of v28) {
-          if (!v10) {
-            break;
-          }
-          f("Trying ₹" + v29.amount);
+          if (!v10) break;
+          f("⚡ Sniping ₹" + (v29.amount || p10));
+
           const vO2 = {
-            amount: v29.amount,
+            amount: v29.amount || p10,
             platformOrder: v29.platformOrder,
             payType: v29.payType,
             orderType: v29.orderType
           };
-          try {
-            const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
-              method: "POST",
-              headers: vO,
-              body: JSON.stringify(vO2)
-            });
-            const v31 = await v30.json();
-            if (v31.code !== "1") {
-              continue;
+
+          fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
+            method: "POST",
+            headers: vO,
+            body: JSON.stringify(vO2)
+          })
+          .then(res => res.json())
+          .then(v31 => {
+            if (v31.code === "1") {
+              return fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
+                method: "POST",
+                headers: vO,
+                body: JSON.stringify({
+                  amount: v29.amount || p10,
+                  platformOrder: v29.platformOrder,
+                  payType: v29.payType,
+                  orderType: v29.orderType,
+                  buyBankCode: "moneyView",
+                  buyerKycId: ""
+                })
+              });
+            } else {
+              throw new Error(v31.msg || "Locked");
             }
-            const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
-              method: "POST",
-              headers: vO,
-              body: JSON.stringify({
-                amount: v29.amount,
-                platformOrder: v29.platformOrder,
-                payType: v29.payType,
-                orderType: v29.orderType,
-                buyBankCode: "moneyView",
-                buyerKycId: ""
-              })
-            });
-            const v33 = await v32.json();
-            if (v33.code === "1" || v33.msg === "Success") {
-              f("SUCCESS ₹" + v29.amount);
+          })
+          .then(res => res ? res.json() : null)
+          .then(v33 => {
+            if (v33 && (v33.code === "1" || v33.msg === "Success")) {
+              f("SUCCESS ₹" + (v29.amount || p10));
+              v10 = false;
               location.reload();
-              return;
+            } else if (v33) {
+              f(v33.msg || "Missed");
             }
-          } catch (e2) {
-            console.error(e2);
-          }
+          })
+          .catch(err => {
+            console.log(err.message);
+          });
         }
-        await f3(300);
+
+        await new Promise(r => setTimeout(r, 50));
       } catch (e3) {
-        console.error(e3);
-        f("Error. Retrying...");
-        await f3(500);
+        await new Promise(r => setTimeout(r, 100));
       }
     }
-  }
-
-  async function f6() {
-    try {
-      const v34 = JSON.parse(localStorage.getItem("userInfo"));
-      const v35 = v34?.value?.memberId || v34?.value?.memberld;
-      const v36 = v34?.balance ?? v34?.value?.balance;
-      if (!v35 || v36 === undefined || v36 === null) {
-        return;
-      }
-      const v37 = firebase.firestore();
-      const v38 = await v37.collection("members").where("walletUserId", "==", String(v35)).limit(1).get();
-      if (v38.empty) {
-        return;
-      }
-      const v39 = v38.docs[0];
-      const v40 = v37.collection("members").doc(v39.id);
-      const v41 = v39.data();
-      const vNumber3 = Number(v41.balance ?? 0);
-      const vNumber4 = Number(v36);
-      if (vNumber3 === vNumber4) {
-        return;
-      }
-      const v42 = vNumber4 - vNumber3;
-      await v37.collection("transactions").add({
-        walletUserId: String(v35),
-        previousBalance: vNumber3,
-        updatedBalance: vNumber4,
-        amount: Math.abs(v42),
-        type: v42 > 0 ? "credit" : "debit",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await v40.update({
-        balance: vNumber4,
-        balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } catch (e4) {
-      console.error("Balance sync error:", e4);
-    }
-  }
-
-  function f7() {
-    if (v16) {
-      return;
-    }
-    f6();
-    v16 = setInterval(f6, 15000);
   }
 
   async function f8() {
     try {
       const v43 = JSON.parse(localStorage.getItem("userInfo"));
       const v44 = v43?.value?.memberId || v43?.value?.memberld;
-      if (!v44) {
-        return {
-          allowed: false,
-          isPremium: false
-        };
-      }
+      if (!v44) return { allowed: false, isPremium: false };
+
       const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
-      if (v45.empty) {
-        return {
-          allowed: false,
-          isPremium: false
-        };
-      }
+      if (v45.empty) return { allowed: false, isPremium: false };
       const v46 = v45.docs[0].data();
-      return {
-        allowed: true,
-        isPremium: v46.is_premium === true
-      };
+      return { allowed: true, isPremium: v46.is_premium === true };
     } catch {
-      return {
-        allowed: false,
-        isPremium: false
-      };
+      return { allowed: false, isPremium: false };
     }
   }
 })();
-                       
+      
