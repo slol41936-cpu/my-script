@@ -18,15 +18,6 @@
         overflow: hidden;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         user-select: none;
-        transition: box-shadow 0.3s ease, transform 0.3s ease;
-    }
-
-    #cyberPanel:hover {
-        box-shadow: 
-            0 25px 50px rgba(0, 0, 0, 0.3),
-            0 10px 20px rgba(0, 0, 0, 0.18),
-            0 0 25px rgba(197, 160, 89, 0.25),
-            inset 0 1px 1px rgba(255, 255, 255, 1);
     }
 
     .cyber-header {
@@ -158,7 +149,6 @@
 
     .start-btn:hover {
         filter: brightness(1.05);
-        transform: translateY(-1px);
     }
 
     .stop-btn {
@@ -167,11 +157,6 @@
         box-shadow: 
             0 0 0 1.2px rgba(225, 102, 102, 0.5),
             0 4px 10px rgba(181, 94, 101, 0.35);
-    }
-
-    .stop-btn:hover {
-        filter: brightness(1.05);
-        transform: translateY(-1px);
     }
 
     .cyber-status {
@@ -265,7 +250,7 @@
                     type="text" 
                     id="buyAmount" 
                     class="cyber-input" 
-                    value="1000"
+                    value="100"
                     min="1" 
                     oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                 > 
@@ -327,42 +312,8 @@
     return new Promise(p7 => setTimeout(p7, p6));
   }
 
-  async function f2(p3) {
-    return new Promise((p4, p5) => {
-      const v15 = document.createElement("script");
-      v15.src = p3;
-      v15.onload = p4;
-      v15.onerror = p5;
-      document.head.appendChild(v15);
-    });
-  }
-
-  if (!window.firebase) {
-    await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-    await f2("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
-  }
-
-  if (!firebase.apps.length) {
-    firebase.initializeApp({
-      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-      authDomain: "my-ar-automation.firebaseapp.com",
-      projectId: "my-ar-automation",
-      storageBucket: "my-ar-automation.firebasestorage.app",
-      messagingSenderId: "443374813761",
-      appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
-    });
-  }
-
   let v17 = null;
   try {
-    const v18 = await f8();
-    const v19 = v18.allowed;
-    v11 = v18.isPremium;
-    if (!v19) {
-      f("Access denied");
-      return;
-    }
-
     const v20 = localStorage.getItem("token");
     if (v20) {
       try {
@@ -386,7 +337,6 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // পিডিএফ-এর Headers অনুযায়ী নিখুঁত হেডার কনফিগারেশন
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -434,7 +384,7 @@
     });
   })();
 
-  // ----------------- ১০০% নিখুঁত ফাস্ট বায়িং লজিক -----------------
+  // ----------------- অটো রিডাইরেক্ট সহ ১০০% পারফেক্ট বায়িং -----------------
   async function f5(p10, p11) {
     while (v10) {
       try {
@@ -453,11 +403,11 @@
 
         if (!v27.length) {
           f("Scanning " + v24 + "...");
-          await f3(120);
+          await f3(100);
           continue;
         }
 
-        // দশমিক ও রেঞ্জ উভয়ই হ্যান্ডেল করার নিখুঁত ফিল্টার
+        // নিখুঁত রেঞ্জ ও অ্যামাউন্ট ম্যাচিং
         const v28 = v27.filter(p12 => {
           const directAmt = Math.round(Number(p12.amount));
           const minA = Math.round(Number(p12.minimumAmount || p12.amount));
@@ -467,7 +417,7 @@
 
         if (!v28.length) {
           f("Waiting for ₹" + p10);
-          await f3(120);
+          await f3(100);
           continue;
         }
 
@@ -506,10 +456,19 @@
               });
               const v33 = await v32.json();
 
+              // সফল হলে সোজা পেমেন্ট পেজে রিডাইরেক্ট
               if (v33.code === "1" || v33.msg === "Success") {
                 f("SUCCESS ₹" + targetBuyAmt);
                 v10 = false;
-                location.reload();
+                
+                // সার্ভার যদি কোনো সরাসরি লিংক পাঠায়
+                const redirectUrl = v33?.data?.payUrl || v33?.data?.url || v33?.data?.redirectUrl;
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    // অন্যথায় সরাসরি QR অর্ডার হিস্ট্রি পেজে যাওয়া
+                    window.location.href = "https://neggs.payjora.com/#/order";
+                }
                 return;
               } else {
                 f(v33.msg || "Buy Failed");
@@ -521,26 +480,12 @@
             console.error("Order error:", e2);
           }
         }
-        await f3(80);
+        await f3(60);
       } catch (e3) {
         f("Retrying...");
-        await f3(250);
+        await f3(200);
       }
     }
   }
-
-  async function f8() {
-    try {
-      const v43 = JSON.parse(localStorage.getItem("userInfo"));
-      const v44 = v43?.value?.memberId || v43?.value?.memberld;
-      if (!v44) return { allowed: false, isPremium: false };
-
-      const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
-      if (v45.empty) return { allowed: false, isPremium: false };
-      const v46 = v45.docs[0].data();
-      return { allowed: true, isPremium: v46.is_premium === true };
-    } catch {
-      return { allowed: false, isPremium: false };
-    }
-  }
 })();
+      
