@@ -291,7 +291,6 @@
       v9.querySelector(".active").classList.remove("active");
       p.classList.add("active");
       vLN1 = Number(p.dataset.value);
-      console.log("Selected Order Type:", vLN1 === 1 ? "UPI" : "BANK");
     };
   });
 
@@ -352,7 +351,7 @@
   }
 
   let v17 = null;
-  let dynamicMemberId = "22801760"; // ডিফল্ট লগ থেকে প্রাপ্ত মেম্বার আইডি[span_13](start_span)[span_13](end_span)
+  let dynamicMemberId = "22801760"; // নেটওয়ার্ক লগ থেকে[span_17](start_span)[span_17](end_span)
 
   try {
     const v18 = await f8();
@@ -419,7 +418,7 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // নেটওয়ার্ক লগ অনুসারে সঠিক হেডারস কনফিগারেশন[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)
+  // রিকোয়েস্ট হেডার্স[span_18](start_span)[span_18](end_span)[span_19](start_span)[span_19](end_span)
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -484,6 +483,7 @@
     });
   })();
 
+  // আল্ট্রা-ফাস্ট অর্ডার এক্সিকিউশন ফাংশন
   async function f5(p10, p11) {
     while (v10) {
       try {
@@ -504,11 +504,11 @@
 
         if (!v27.length) {
           f("No orders found...");
-          await f3(250);
+          await f3(100); // ১০০ms বিরতি
           continue;
         }
 
-        // ফ্লেক্সিবল ম্যাচিং: হুবহু অ্যামাউন্ট অথবা রেঞ্জ ভিত্তিক সমর্থন[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span)
+        // হুবহু টাকা বা রেঞ্জ ম্যাচিং
         const v28 = v27.filter(p12 => {
           const directAmount = Number(p12.amount || 0);
           const minA = Number(p12.minAmount || p12.startAmount || directAmount);
@@ -519,17 +519,18 @@
 
         if (!v28.length) {
           f("Waiting for order ₹" + p10);
-          await f3(250);
+          await f3(100);
           continue;
         }
 
+        // দ্রুত অর্ডার লক করার প্রচেষ্টা
         for (const v29 of v28) {
           if (!v10) {
             break;
           }
 
           const targetOrderAmount = Number(v29.amount) || p10;
-          f("Trying ₹" + targetOrderAmount);
+          f("Locking ₹" + targetOrderAmount + "...");
 
           const vO2 = {
             amount: targetOrderAmount,
@@ -539,6 +540,7 @@
           };
 
           try {
+            // স্টেপ ১: অর্ডার প্রাক-যাচাই (beforeBuy)
             const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
               headers: vO,
@@ -547,10 +549,11 @@
 
             const v31 = await v30.json();
             if (v31.code !== "1") {
+              console.log("BeforeBuy Skipped:", v31?.msg || v31?.code);
               continue;
             }
 
-            // MoneyView এর বাউন্ড অ্যাকাউন্ট আইডি সহ বাই রিকোয়েস্ট[span_18](start_span)[span_18](end_span)
+            // স্টেপ ২: অবিলম্বে চূড়ান্ত বাই কল (buy) - কোনো ডিলে ছাড়াই
             const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
@@ -560,7 +563,7 @@
                 payType: v29.payType,
                 orderType: v29.orderType,
                 buyBankCode: "moneyView",
-                buyerKycId: "5265767" // আপনার বাউন্ড মানিভিউ আইডি[span_19](start_span)[span_19](end_span)
+                buyerKycId: "5265767" // MoneyView একাউন্ট আইডি[span_20](start_span)[span_20](end_span)
               })
             });
 
@@ -570,17 +573,18 @@
               location.reload();
               return;
             } else {
-              console.log("Buy Failed:", v33);
+              console.log("Buy Missed:", v33?.msg);
+              f(v33?.msg || "Order taken!");
             }
           } catch (e2) {
             console.error(e2);
           }
         }
-        await f3(250);
+        await f3(100);
       } catch (e3) {
         console.error(e3);
         f("Error. Retrying...");
-        await f3(500);
+        await f3(300);
       }
     }
   }
@@ -662,4 +666,4 @@
     }
   }
 })();
-             
+    
