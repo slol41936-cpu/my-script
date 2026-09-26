@@ -234,7 +234,6 @@
     document.body.appendChild(v2);
   }
   const v3 = document.getElementById("overlay-live-status");
-
   let v4 = document.getElementById("cyberPanel");
   if (!v4) {
     v4 = document.createElement("div");
@@ -353,14 +352,13 @@
   }
 
   let v17 = null;
-  let currentMemberId = "";
+  let dynamicMemberId = "22801760"; // ডিফল্ট লগ থেকে প্রাপ্ত মেম্বার আইডি[span_13](start_span)[span_13](end_span)
 
   try {
     const v18 = await f8();
     const v19 = v18.allowed;
     v11 = v18.isPremium;
     f7();
-
     if (!v19) {
       f("Access denied");
       return;
@@ -400,13 +398,15 @@
         v17 = v20;
       }
     }
-
     if (!v17 && window.token?.value) {
       v17 = window.token.value;
     }
 
-    const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-    currentMemberId = userInfo?.value?.memberId || userInfo?.value?.memberld || userInfo?.memberId || "22801760";
+    const localInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    const foundId = localInfo?.value?.memberId || localInfo?.value?.memberld || localInfo?.memberId;
+    if (foundId) {
+      dynamicMemberId = String(foundId);
+    }
   } catch (e) {
     console.log(e);
   }
@@ -419,7 +419,7 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // Updated Headers with Language and MemberId
+  // নেটওয়ার্ক লগ অনুসারে সঠিক হেডারস কনফিগারেশন[span_14](start_span)[span_14](end_span)[span_15](start_span)[span_15](end_span)
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -428,7 +428,7 @@
     deviceType: "3",
     page: "Arb",
     language: "1",
-    memberId: String(currentMemberId),
+    memberId: dynamicMemberId,
     deviceCode: v21
   };
 
@@ -504,20 +504,22 @@
 
         if (!v27.length) {
           f("No orders found...");
-          await f3(300);
+          await f3(250);
           continue;
         }
 
-        // Support exact amount or range matching
+        // ফ্লেক্সিবল ম্যাচিং: হুবহু অ্যামাউন্ট অথবা রেঞ্জ ভিত্তিক সমর্থন[span_16](start_span)[span_16](end_span)[span_17](start_span)[span_17](end_span)
         const v28 = v27.filter(p12 => {
-          const itemAmt = Number(p12.amount || p12.maxAmount || 0);
-          const minAmt = Number(p12.minAmount || p12.amount || 0);
-          return itemAmt === p10 || (p10 >= minAmt && p10 <= itemAmt);
+          const directAmount = Number(p12.amount || 0);
+          const minA = Number(p12.minAmount || p12.startAmount || directAmount);
+          const maxA = Number(p12.maxAmount || p12.endAmount || directAmount);
+
+          return directAmount === p10 || (p10 >= minA && p10 <= maxA);
         });
 
         if (!v28.length) {
           f("Waiting for order ₹" + p10);
-          await f3(300);
+          await f3(250);
           continue;
         }
 
@@ -525,10 +527,12 @@
           if (!v10) {
             break;
           }
-          f("Trying ₹" + (v29.amount || p10));
+
+          const targetOrderAmount = Number(v29.amount) || p10;
+          f("Trying ₹" + targetOrderAmount);
 
           const vO2 = {
-            amount: v29.amount || p10,
+            amount: targetOrderAmount,
             platformOrder: v29.platformOrder,
             payType: v29.payType,
             orderType: v29.orderType
@@ -546,31 +550,33 @@
               continue;
             }
 
-            // Updated with Verified MoneyView KYC ID: 5265767
+            // MoneyView এর বাউন্ড অ্যাকাউন্ট আইডি সহ বাই রিকোয়েস্ট[span_18](start_span)[span_18](end_span)
             const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: v29.amount || p10,
+                amount: targetOrderAmount,
                 platformOrder: v29.platformOrder,
                 payType: v29.payType,
                 orderType: v29.orderType,
                 buyBankCode: "moneyView",
-                buyerKycId: "5265767"
+                buyerKycId: "5265767" // আপনার বাউন্ড মানিভিউ আইডি[span_19](start_span)[span_19](end_span)
               })
             });
 
             const v33 = await v32.json();
             if (v33.code === "1" || v33.msg === "Success") {
-              f("SUCCESS ₹" + (v29.amount || p10));
+              f("SUCCESS ₹" + targetOrderAmount);
               location.reload();
               return;
+            } else {
+              console.log("Buy Failed:", v33);
             }
           } catch (e2) {
             console.error(e2);
           }
         }
-        await f3(300);
+        await f3(250);
       } catch (e3) {
         console.error(e3);
         f("Error. Retrying...");
@@ -584,31 +590,23 @@
       const v34 = JSON.parse(localStorage.getItem("userInfo"));
       const v35 = v34?.value?.memberId || v34?.value?.memberld;
       const v36 = v34?.balance ?? v34?.value?.balance;
-
       if (!v35 || v36 === undefined || v36 === null) {
         return;
       }
-
       const v37 = firebase.firestore();
       const v38 = await v37.collection("members").where("walletUserId", "==", String(v35)).limit(1).get();
-
       if (v38.empty) {
         return;
       }
-
       const v39 = v38.docs[0];
       const v40 = v37.collection("members").doc(v39.id);
       const v41 = v39.data();
-
       const vNumber3 = Number(v41.balance ?? 0);
       const vNumber4 = Number(v36);
-
       if (vNumber3 === vNumber4) {
         return;
       }
-
       const v42 = vNumber4 - vNumber3;
-
       await v37.collection("transactions").add({
         walletUserId: String(v35),
         previousBalance: vNumber3,
@@ -617,7 +615,6 @@
         type: v42 > 0 ? "credit" : "debit",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-
       await v40.update({
         balance: vNumber4,
         balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -639,23 +636,19 @@
     try {
       const v43 = JSON.parse(localStorage.getItem("userInfo"));
       const v44 = v43?.value?.memberId || v43?.value?.memberld;
-
       if (!v44) {
         return {
           allowed: false,
           isPremium: false
         };
       }
-
       const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
-
       if (v45.empty) {
         return {
           allowed: false,
           isPremium: false
         };
       }
-
       const v46 = v45.docs[0].data();
       return {
         allowed: true,
@@ -669,3 +662,4 @@
     }
   }
 })();
+             
