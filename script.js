@@ -351,7 +351,7 @@
   }
 
   let v17 = null;
-  let dynamicMemberId = "22801760"; // নেটওয়ার্ক লগ থেকে[span_17](start_span)[span_17](end_span)
+  let dynamicMemberId = "22801760"; // লগ থেকে[span_20](start_span)[span_20](end_span)
 
   try {
     const v18 = await f8();
@@ -418,7 +418,7 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // রিকোয়েস্ট হেডার্স[span_18](start_span)[span_18](end_span)[span_19](start_span)[span_19](end_span)
+  // নতুন আপডেটেড হেডার কনফিগারেশন[span_21](start_span)[span_21](end_span)
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -446,7 +446,7 @@
     }
     v10 = true;
     v2.style.display = "flex";
-    f("🟢 Running | Amount ₹" + vNumber2);
+    f("🟢 Matching | ₹" + vNumber2);
     f5(vNumber2, vLN1);
   };
 
@@ -483,108 +483,75 @@
     });
   })();
 
-  // আল্ট্রা-ফাস্ট অর্ডার এক্সিকিউশন ফাংশন
+  // আসল smartRangeBuy ইঞ্জিন[span_22](start_span)[span_22](end_span)
   async function f5(p10, p11) {
+    // এপিআই বেস ইউআরএল[span_23](start_span)[span_23](end_span)
+    const baseUrl = "https://apiweb.payapiar.com";
+
     while (v10) {
       try {
-        const v24 = p11 === 1 ? "UPI" : "BANK";
-        f("Checking " + v24 + " orders for ₹" + p10 + "...");
+        f("Matching ₹" + p10 + " via Engine...");
 
-        const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
+        // ১. স্টার্ট ম্যাচিং কল (নতুন API)[span_24](start_span)[span_24](end_span)
+        const startRes = await fetch(baseUrl + "/ar-wallet/smartRangeBuy/match/start", {
           method: "POST",
           headers: vO,
           body: JSON.stringify({
+            minAmount: p10,
+            maxAmount: p10,
             orderType: p11,
-            pageNo: 1
+            buyBankCode: "moneyView",
+            buyerKycId: 5265767
           })
         });
 
-        const v26 = await v25.json();
-        const v27 = v26?.data?.list || [];
+        const startData = await startRes.json();
 
-        if (!v27.length) {
-          f("No orders found...");
-          await f3(100); // ১০০ms বিরতি
-          continue;
-        }
-
-        // হুবহু টাকা বা রেঞ্জ ম্যাচিং
-        const v28 = v27.filter(p12 => {
-          const directAmount = Number(p12.amount || 0);
-          const minA = Number(p12.minAmount || p12.startAmount || directAmount);
-          const maxA = Number(p12.maxAmount || p12.endAmount || directAmount);
-
-          return directAmount === p10 || (p10 >= minA && p10 <= maxA);
-        });
-
-        if (!v28.length) {
-          f("Waiting for order ₹" + p10);
-          await f3(100);
-          continue;
-        }
-
-        // দ্রুত অর্ডার লক করার প্রচেষ্টা
-        for (const v29 of v28) {
-          if (!v10) {
-            break;
-          }
-
-          const targetOrderAmount = Number(v29.amount) || p10;
-          f("Locking ₹" + targetOrderAmount + "...");
-
-          const vO2 = {
-            amount: targetOrderAmount,
-            platformOrder: v29.platformOrder,
-            payType: v29.payType,
-            orderType: v29.orderType
-          };
-
-          try {
-            // স্টেপ ১: অর্ডার প্রাক-যাচাই (beforeBuy)
-            const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
-              method: "POST",
-              headers: vO,
-              body: JSON.stringify(vO2)
-            });
-
-            const v31 = await v30.json();
-            if (v31.code !== "1") {
-              console.log("BeforeBuy Skipped:", v31?.msg || v31?.code);
-              continue;
-            }
-
-            // স্টেপ ২: অবিলম্বে চূড়ান্ত বাই কল (buy) - কোনো ডিলে ছাড়াই
-            const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
+        // যদি অলরেডি কোনো অর্ডার ম্যাচ হয়ে থাকে বা পেন্ডিং থাকে[span_25](start_span)[span_25](end_span)
+        if (startData?.code === "1") {
+          const matchInfo = startData?.data;
+          
+          // ২. ম্যাচিং রেজাল্ট চেক করার দৃশ্যমান লুপ[span_26](start_span)[span_26](end_span)
+          let checkCount = 0;
+          while (v10 && checkCount < 10) {
+            checkCount++;
+            const listRes = await fetch(baseUrl + "/ar-wallet/smartRangeBuy/scene/list", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: targetOrderAmount,
-                platformOrder: v29.platformOrder,
-                payType: v29.payType,
-                orderType: v29.orderType,
-                buyBankCode: "moneyView",
-                buyerKycId: "5265767" // MoneyView একাউন্ট আইডি[span_20](start_span)[span_20](end_span)
+                orderType: p11
               })
             });
 
-            const v33 = await v32.json();
-            if (v33.code === "1" || v33.msg === "Success") {
-              f("SUCCESS ₹" + targetOrderAmount);
-              location.reload();
+            const listData = await listRes.json();
+            const resData = listData?.data;
+
+            // যদি অর্ডার ম্যাচ হয়ে যায়[span_27](start_span)[span_27](end_span)[span_28](start_span)[span_28](end_span)!
+            if (resData?.matchResult === "MATCHED" || resData?.status === "COMPLETED" || resData?.pendingOrder) {
+              const matchedOrder = resData?.pendingOrder?.platformOrder || resData?.lastMatchResult?.platformOrder;
+              f("🟢 SUCCESS! ORDER LOCKED");
+              
+              // ক্যাশিয়ার পেজে রিডাইরেক্ট[span_29](start_span)[span_29](end_span)[span_30](start_span)[span_30](end_span)
+              if (matchedOrder) {
+                location.href = location.origin + "/#/order/cashier?platformOrder=" + matchedOrder;
+              } else {
+                location.reload();
+              }
               return;
-            } else {
-              console.log("Buy Missed:", v33?.msg);
-              f(v33?.msg || "Order taken!");
             }
-          } catch (e2) {
-            console.error(e2);
+
+            f("Searching best order (" + checkCount + ")...");
+            await f3(300);
           }
+        } else {
+          f(startData?.msg || "Retrying...");
         }
-        await f3(100);
+
+        await f3(200);
       } catch (e3) {
         console.error(e3);
-        f("Error. Retrying...");
-        await f3(300);
+        f("Engine Sync Error. Retrying...");
+        await f3(500);
       }
     }
   }
@@ -666,4 +633,4 @@
     }
   }
 })();
-    
+                       
