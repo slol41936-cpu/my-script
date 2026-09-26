@@ -84,7 +84,7 @@
 
     .toggle-container {
         display: grid;
-        grid-template-columns: 1.2fr 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 6px;
     }
 
@@ -250,8 +250,8 @@
             <div>
                 <label class="cyber-label">Payment Type</label>
                 <div class="toggle-container" id="orderTypeToggle">
-                    <div class="toggle-option" data-value="1">UPI</div>
-                    <div class="toggle-option active" data-value="2">BANK</div>
+                    <div class="toggle-option active" data-value="1">UPI</div>
+                    <div class="toggle-option" data-value="2">BANK</div>
                 </div>
             </div>
 
@@ -282,7 +282,7 @@
   const v8 = document.getElementById("buyAmount");
   const v9 = document.getElementById("orderTypeToggle");
   let v10 = false;
-  let vLN1 = 2; // ডিফল্ট মোডে ব্যাঙ্ক অর্ডার টাইপ ২ থাকে
+  let vLN1 = 1; // UPI = 1, BANK = 2
   let v11 = false;
 
   v9.querySelectorAll(".toggle-option").forEach(p => {
@@ -366,7 +366,7 @@
     function f4() {
       const vNumber = Number(v8.value);
       if (!v11) {
-        if (vNumber < 1000) {
+        if (vNumber < 100) {
           v6.disabled = true;
           v6.style.opacity = "0.5";
           v6.style.cursor = "not-allowed";
@@ -380,10 +380,6 @@
         v6.style.opacity = "1";
         v6.style.cursor = "pointer";
       }
-    }
-
-    if (!v11) {
-      v8.value = "1000";
     }
 
     v8.addEventListener("input", f4);
@@ -418,7 +414,7 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // লগের সাথে শতভাগ মেলানো রিকোয়েস্ট হেডার
+  // ব্রাউজার লগের হুবহু রিকোয়েস্ট হেডার
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -438,13 +434,9 @@
       f("Enter amount");
       return;
     }
-    if (!v11 && vNumber2 < 1000) {
-      f("Minimum order value is 1000");
-      return;
-    }
     v10 = true;
     v2.style.display = "flex";
-    f("🟢 Running | Amount ₹" + vNumber2);
+    f("🟢 Running | ₹" + vNumber2);
     f5(vNumber2, vLN1);
   };
 
@@ -479,14 +471,14 @@
     });
   })();
 
-  // আল্ট্রা-স্পিড এক্সিকিউশন
+  // হাই-স্পিড অটোমেটেড বাই লুপ
   async function f5(p10, p11) {
     const baseUrl = "https://apiweb.apiarbpay.com";
 
     while (v10) {
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
-        f("Scanning " + v24 + " for ₹" + p10 + "...");
+        f("Searching " + v24 + " for ₹" + p10 + "...");
 
         const v25 = await fetch(baseUrl + "/ar-wallet/buyCenter/buyList", {
           method: "POST",
@@ -501,13 +493,15 @@
         const v27 = v26?.data?.list || [];
 
         if (!v27.length) {
-          await f3(80);
+          await f3(60);
           continue;
         }
 
-        const v28 = v27.filter(p12 => Number(p12.amount) === p10);
+        // ফ্লোট/ডেসিম্যাল অ্যামাউন্ট পার্সিং ফিক্স (100.00 বা 1000 হুবহু ম্যাচ করবে)
+        const v28 = v27.filter(p12 => Math.floor(Number(p12.amount)) === p10);
+
         if (!v28.length) {
-          await f3(80);
+          await f3(60);
           continue;
         }
 
@@ -515,30 +509,35 @@
           if (!v10) break;
           f("Locking ₹" + v29.amount + "...");
 
+          const orderAmount = Number(v29.amount);
+          const payType = String(v29.payType || (p11 === 1 ? "3" : "1")); // ডাইনামিক payType
+          const orderType = Number(v29.orderType || p11);
+
           try {
+            // ১. beforeBuy কল
             const v30 = await fetch(baseUrl + "/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: Number(v29.amount),
+                amount: orderAmount,
                 platformOrder: v29.platformOrder,
-                payType: String(v29.payType || "1"),
-                orderType: Number(v29.orderType || p11)
+                payType: payType,
+                orderType: orderType
               })
             });
 
             const v31 = await v30.json();
             if (v31.code !== "1") continue;
 
-            // সফল লগের হুবহু পেলোড
+            // ২. সাথে সাথে চূড়ান্ত buy কল (আপনার ভেরিফাইড MoneyView ও KYC ID সহ)
             const v32 = await fetch(baseUrl + "/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: Number(v29.amount),
+                amount: orderAmount,
                 platformOrder: v29.platformOrder,
-                payType: String(v29.payType || "1"),
-                orderType: Number(v29.orderType || p11),
+                payType: payType,
+                orderType: orderType,
                 buyBankCode: "moneyView",
                 buyerKycId: 5265767
               })
@@ -546,7 +545,7 @@
 
             const v33 = await v32.json();
             if (v33.code === "1" || v33.msg === "Success") {
-              f("🟢 SUCCESS ₹" + v29.amount);
+              f("🟢 SUCCESS ₹" + orderAmount);
               const targetOrder = v33?.data?.buyOrderNo || v33?.data?.platformOrder || v29.platformOrder;
               if (targetOrder) {
                 location.href = location.origin + "/#/order/cashier?platformOrder=" + targetOrder;
@@ -559,10 +558,10 @@
             console.error(e2);
           }
         }
-        await f3(80);
+        await f3(60);
       } catch (e3) {
         console.error(e3);
-        await f3(250);
+        await f3(200);
       }
     }
   }
