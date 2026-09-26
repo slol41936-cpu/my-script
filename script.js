@@ -276,7 +276,6 @@
         </div>`;
     document.body.appendChild(v4);
   }
-
   const v5 = document.getElementById("cyberStatus");
   const v6 = document.getElementById("startBtn");
   const v7 = document.getElementById("stopBtn");
@@ -291,6 +290,7 @@
       v9.querySelector(".active").classList.remove("active");
       p.classList.add("active");
       vLN1 = Number(p.dataset.value);
+      console.log("Selected Order Type:", vLN1 === 1 ? "UPI" : "BANK");
     };
   });
 
@@ -351,7 +351,7 @@
   }
 
   let v17 = null;
-  let dynamicMemberId = "22801760"; // লগ থেকে প্রাপ্ত আইডি
+  let dynamicMemberId = "22801760"; // আপনার অ্যাকাউন্ট আইডি
 
   try {
     const v18 = await f8();
@@ -418,7 +418,7 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // নেটওয়ার্ক লগের হুবহু রিকোয়েস্ট হেডার
+  // লগে থাকা সঠিক হেডার কনফিগারেশন
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -446,7 +446,7 @@
     }
     v10 = true;
     v2.style.display = "flex";
-    f("🟢 Searching ₹" + vNumber2);
+    f("🟢 Running | Amount ₹" + vNumber2);
     f5(vNumber2, vLN1);
   };
 
@@ -483,17 +483,13 @@
     });
   })();
 
-  // আসল Default মোড এক্সিকিউটর (হাই-স্পিড সরাসরি অর্ডার লকিং)
   async function f5(p10, p11) {
-    const baseUrl = "https://apiweb.apiarbpay.com";
-
     while (v10) {
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
-        f("Scanning " + v24 + " for ₹" + p10 + "...");
-
-        // ১. buyList থেকে সরাসরি ফিক্সড অর্ডারের তালিকা নেওয়া
-        const v25 = await fetch(baseUrl + "/ar-wallet/buyCenter/buyList", {
+        f("Checking " + v24 + " orders for ₹" + p10 + "...");
+        
+        const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
           body: JSON.stringify({
@@ -501,51 +497,49 @@
             pageNo: 1
           })
         });
-
+        
         const v26 = await v25.json();
         const v27 = v26?.data?.list || [];
-
+        
         if (!v27.length) {
-          f("Waiting for orders...");
+          f("No orders found...");
           await f3(100);
           continue;
         }
 
-        // আপনার কাঙ্ক্ষিত অ্যামাউন্ট ফিল্টার করা
         const v28 = v27.filter(p12 => Number(p12.amount) === p10);
-
         if (!v28.length) {
-          f("Waiting for ₹" + p10);
+          f("Waiting for order ₹" + p10);
           await f3(100);
           continue;
         }
 
-        // ২. অর্ডার দ্রুত বুকিং করার লুপ
         for (const v29 of v28) {
-          if (!v10) break;
+          if (!v10) {
+            break;
+          }
+          f("Trying ₹" + v29.amount);
 
-          f("Locking ₹" + v29.amount + "...");
+          const vO2 = {
+            amount: Number(v29.amount),
+            platformOrder: v29.platformOrder,
+            payType: String(v29.payType || "1"),
+            orderType: Number(v29.orderType || p11)
+          };
 
           try {
-            // beforeBuy রিকোয়েস্ট (লগে প্রদর্শিত ফর্ম্যাট)
-            const v30 = await fetch(baseUrl + "/ar-wallet/buyCenter/beforeBuy", {
+            const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
               headers: vO,
-              body: JSON.stringify({
-                amount: Number(v29.amount),
-                platformOrder: v29.platformOrder,
-                payType: String(v29.payType || "1"),
-                orderType: Number(v29.orderType || p11)
-              })
+              body: JSON.stringify(vO2)
             });
-
             const v31 = await v30.json();
             if (v31.code !== "1") {
               continue;
             }
 
-            // চূড়ান্ত buy কল (আপনার ভেরিফাইড MoneyView KYC ID সহ)
-            const v32 = await fetch(baseUrl + "/ar-wallet/buyCenter/buy", {
+            // বাউন্ড KYC ID এবং সঠিক পেলোড দিয়ে অর্ডার বুকিং
+            const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
@@ -559,10 +553,8 @@
             });
 
             const v33 = await v32.json();
-
-            // সফল হলে পেমেন্ট পেজে রিডাইরেক্ট
             if (v33.code === "1" || v33.msg === "Success") {
-              f("🟢 SUCCESS ₹" + v29.amount);
+              f("SUCCESS ₹" + v29.amount);
               const targetOrder = v33?.data?.buyOrderNo || v33?.data?.platformOrder || v29.platformOrder;
               if (targetOrder) {
                 location.href = location.origin + "/#/order/cashier?platformOrder=" + targetOrder;
@@ -570,8 +562,6 @@
                 location.reload();
               }
               return;
-            } else {
-              f(v33.msg || "Order snatched!");
             }
           } catch (e2) {
             console.error(e2);
@@ -580,7 +570,7 @@
         await f3(100);
       } catch (e3) {
         console.error(e3);
-        f("Retrying...");
+        f("Error. Retrying...");
         await f3(300);
       }
     }
@@ -663,4 +653,4 @@
     }
   }
 })();
-             
+      
