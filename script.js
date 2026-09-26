@@ -1,5 +1,3 @@
-
-javascript
 (async function () {
   const v = document.createElement("style");
   v.innerHTML = `
