@@ -9,6 +9,7 @@
         z-index: 999999;
         background: #f0ebe4;
         border-radius: 22px;
+        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
         box-shadow: 
             0 20px 45px rgba(0, 0, 0, 0.25),
             0 8px 16px rgba(0, 0, 0, 0.15),
@@ -21,6 +22,7 @@
         transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
 
+    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
     #cyberPanel:hover {
         box-shadow: 
             0 25px 50px rgba(0, 0, 0, 0.3),
@@ -82,6 +84,7 @@
         letter-spacing: 0.5px;
     }
 
+    /* Toggle Buttons */
     .toggle-container {
         display: grid;
         grid-template-columns: 1.2fr 1fr;
@@ -109,6 +112,7 @@
             0 4px 10px rgba(80, 151, 150, 0.4);
     }
 
+    /* Input Field */
     .cyber-input {
         width: 100%;
         box-sizing: border-box;
@@ -130,6 +134,7 @@
         outline: none;
     }
 
+    /* Action Buttons */
     .cyber-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -174,6 +179,7 @@
         transform: translateY(-1px);
     }
 
+    /* Status Indicator */
     .cyber-status {
         margin-top: 2px;
         background: #ded7cd;
@@ -351,8 +357,6 @@
   }
 
   let v17 = null;
-  let dynamicMemberId = "22801760"; // আপনার অ্যাকাউন্ট আইডি
-
   try {
     const v18 = await f8();
     const v19 = v18.allowed;
@@ -400,12 +404,6 @@
     if (!v17 && window.token?.value) {
       v17 = window.token.value;
     }
-
-    const localInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-    const foundId = localInfo?.value?.memberId || localInfo?.value?.memberld || localInfo?.memberId;
-    if (foundId) {
-      dynamicMemberId = String(foundId);
-    }
   } catch (e) {
     console.log(e);
   }
@@ -418,7 +416,6 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
-  // লগে থাকা সঠিক হেডার কনফিগারেশন
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -426,8 +423,6 @@
     deviceId: "undefined",
     deviceType: "3",
     page: "Arb",
-    language: "1",
-    memberId: dynamicMemberId,
     deviceCode: v21
   };
 
@@ -488,7 +483,6 @@
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
         f("Checking " + v24 + " orders for ₹" + p10 + "...");
-        
         const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
@@ -497,36 +491,30 @@
             pageNo: 1
           })
         });
-        
         const v26 = await v25.json();
         const v27 = v26?.data?.list || [];
-        
         if (!v27.length) {
           f("No orders found...");
-          await f3(100);
+          await f3(300);
           continue;
         }
-
         const v28 = v27.filter(p12 => Number(p12.amount) === p10);
         if (!v28.length) {
           f("Waiting for order ₹" + p10);
-          await f3(100);
+          await f3(300);
           continue;
         }
-
         for (const v29 of v28) {
           if (!v10) {
             break;
           }
           f("Trying ₹" + v29.amount);
-
           const vO2 = {
-            amount: Number(v29.amount),
+            amount: v29.amount,
             platformOrder: v29.platformOrder,
-            payType: String(v29.payType || "1"),
-            orderType: Number(v29.orderType || p11)
+            payType: v29.payType,
+            orderType: v29.orderType
           };
-
           try {
             const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
@@ -537,41 +525,33 @@
             if (v31.code !== "1") {
               continue;
             }
-
-            // বাউন্ড KYC ID এবং সঠিক পেলোড দিয়ে অর্ডার বুকিং
             const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: Number(v29.amount),
+                amount: v29.amount,
                 platformOrder: v29.platformOrder,
-                payType: String(v29.payType || "1"),
-                orderType: Number(v29.orderType || p11),
+                payType: v29.payType,
+                orderType: v29.orderType,
                 buyBankCode: "moneyView",
-                buyerKycId: 5265767
+                buyerKycId: ""
               })
             });
-
             const v33 = await v32.json();
             if (v33.code === "1" || v33.msg === "Success") {
               f("SUCCESS ₹" + v29.amount);
-              const targetOrder = v33?.data?.buyOrderNo || v33?.data?.platformOrder || v29.platformOrder;
-              if (targetOrder) {
-                location.href = location.origin + "/#/order/cashier?platformOrder=" + targetOrder;
-              } else {
-                location.reload();
-              }
+              location.reload();
               return;
             }
           } catch (e2) {
             console.error(e2);
           }
         }
-        await f3(100);
+        await f3(300);
       } catch (e3) {
         console.error(e3);
         f("Error. Retrying...");
-        await f3(300);
+        await f3(500);
       }
     }
   }
@@ -653,4 +633,4 @@
     }
   }
 })();
-      
+              
