@@ -355,7 +355,7 @@
     deviceCode: deviceCode
   };
 
-  // ড্র্যাগিং সাপোর্ট
+  // ড্র্যাগ কন্ট্রোল
   (function initDraggable() {
     const header = document.getElementById("cyberDragHeader");
     let isDragging = false;
@@ -393,7 +393,7 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // হাই-স্পিড এক্সিকিউটর
+  // নিরাপদ ও স্থিতিশীল এক্সিকিউটর
   async function runAutoBuyEngine(targetAmount, orderType) {
     const baseUrl = "https://apiweb.payapiar.com";
     const bankCode = orderType === 1 ? "paytm" : "moneyView";
@@ -404,7 +404,7 @@
 
     while (isRunning) {
       try {
-        logStatus(`⚡ Hunting ₹${targetAmount}...`);
+        logStatus(`Scanning ₹${targetAmount}...`);
 
         const startRes = await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/start`, {
           method: "POST",
@@ -420,17 +420,16 @@
 
         const startData = await startRes.json();
 
-        // 1083 কোড আসলে সাময়িক বিরতি
+        // 1083 কোড এলে সার্ভার রেট-লিমিট এড়িয়ে বিরতি নেওয়া
         if (startData?.code === "1083") {
-          logStatus("Rate limited. Waiting...");
-          await sleep(1000);
+          logStatus("Cooling down 2s...");
+          await sleep(2000);
           continue;
         }
 
         if (startData?.code === "1") {
           let checks = 0;
-          // হাই-স্পিডে দ্রুত পোলিং লুপ
-          while (isRunning && checks < 10) {
+          while (isRunning && checks < 8) {
             checks++;
             const listRes = await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/scene/list`, {
               method: "POST",
@@ -442,11 +441,11 @@
             const resData = listData?.data;
 
             if (listData?.code === "1083") {
-              await sleep(800);
+              await sleep(1500);
               continue;
             }
 
-            // অর্ডার ম্যাচ ডিটেকশন
+            // ম্যাচিং টেস্ট
             if (
               resData?.matchResult === "MATCHED" || 
               resData?.status === "COMPLETED" || 
@@ -456,9 +455,9 @@
               const matchedOrder = orderObj?.platformOrder;
               const matchedAmount = Number(orderObj?.amount || resData?.amount || 0);
 
-              // ফিল্টারিং: টার্গেট অ্যামাউন্টের সাথে তুলনা
+              // ফিল্টারিং: টার্গেট অ্যামাউন্ট ব্যতীত অন্য যেকোনো অ্যামাউন্ট বাতিল করা
               if (matchedAmount > 0 && matchedAmount !== targetAmount) {
-                logStatus(`⚠️️ Ignored ₹${matchedAmount}`);
+                logStatus(`⚠️ Ignored ₹${matchedAmount}`);
                 
                 try {
                   await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
@@ -468,11 +467,11 @@
                   });
                 } catch (e) {}
 
-                await sleep(250); // দ্রুত ক্যানসেল করে পরবর্তী ট্রাইয়ে যাওয়া
+                await sleep(500);
                 break;
               }
 
-              // সঠিক অ্যামাউন্ট হলে লক করে ক্যাশিয়ার পেজে নেওয়া
+              // সঠিক অ্যামাউন্ট হলে ক্যাশিয়ার পেজে রিডাইরেক্ট
               logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
               if (matchedOrder) {
                 location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
@@ -482,17 +481,17 @@
               return;
             }
 
-            logStatus(`⚡ Checking (${checks})...`);
-            await sleep(120); // দ্রুততম নিরাপদ রেসপন্স রেট
+            logStatus(`Matching (${checks})...`);
+            await sleep(280); // ব্যালেন্সড নিরাপদ পোলিং টাইম
           }
         } else {
           logStatus(startData?.msg || "Retrying...");
         }
 
-        await sleep(150); // সাইকেল বিরতি কমিয়ে আনা হয়েছে
+        await sleep(350); // স্বাভাবিক ইন্টারভাল
       } catch (err) {
-        logStatus("Sync Error");
-        await sleep(400);
+        logStatus("Network Sync Error");
+        await sleep(600);
       }
     }
   }
@@ -514,10 +513,10 @@
       liveStatusEl.innerText = "SYSTEM ACTIVE";
       setTimeout(() => {
         overlayEl.style.display = "none";
-        logStatus(`⚡ Hunting ₹${amountVal}`);
+        logStatus(`🟢 Target ₹${amountVal}`);
         runAutoBuyEngine(amountVal, selectedOrderType);
-      }, 250);
-    }, 250);
+      }, 300);
+    }, 300);
   };
 
   stopBtn.onclick = () => {
@@ -528,4 +527,3 @@
 
   logStatus("Ready");
 })();
-                                                    
