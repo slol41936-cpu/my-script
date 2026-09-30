@@ -1,16 +1,16 @@
-(function () {
-  // ১. ডুপ্লিকেট প্যানেল ক্লিনআপ
-  const p = document.getElementById("cyberPanel");
-  if (p) p.remove();
-  const o = document.getElementById("cyberOverlay");
-  if (o) o.remove();
-  const s = document.getElementById("cyberMonitorStyle");
-  if (s) s.remove();
+(async function () {
+  // ১. ডুপ্লিকেট এলিমেন্ট ক্লিনআপ
+  const oldPanel = document.getElementById("cyberPanel");
+  if (oldPanel) oldPanel.remove();
+  const oldOverlay = document.getElementById("cyberOverlay");
+  if (oldOverlay) oldOverlay.remove();
+  const oldStyle = document.getElementById("cyberStyle");
+  if (oldStyle) oldStyle.remove();
 
-  // ২. আপনার অরিজিনাল সিএসএস ডিজাইন
-  const style = document.createElement("style");
-  style.id = "cyberMonitorStyle";
-  style.innerHTML = `
+  // ২. আপনার অরিজিনাল বেইজ ডিজাইন সিএসএস
+  const styleEl = document.createElement("style");
+  styleEl.id = "cyberStyle";
+  styleEl.innerHTML = `
     #cyberPanel {
       position: fixed;
       right: 20px;
@@ -60,7 +60,6 @@
       box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 2px 5px rgba(0,0,0,0.2);
       color: #fff;
       font-size: 11px;
-      flex-shrink: 0;
     }
 
     .cyber-header-title {
@@ -197,7 +196,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      color: #7d7265;
+      color: #ba5d58;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
@@ -205,30 +204,6 @@
       box-shadow: inset 1px 2px 3px rgba(0, 0, 0, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
       transition: all 0.3s ease;
       box-sizing: border-box;
-    }
-
-    .cyber-info-box {
-      margin-top: 2px;
-      background: rgba(222, 215, 205, 0.6);
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-size: 11px;
-      color: #554e44;
-      line-height: 1.45;
-      display: none;
-      border: 1px dashed #c5a059;
-      box-sizing: border-box;
-    }
-
-    .cyber-info-row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 2px;
-    }
-
-    .cyber-info-row span:first-child {
-      font-weight: 700;
-      color: #7d7265;
     }
 
     #overlay-status-container {
@@ -247,12 +222,12 @@
       text-shadow: 0 0 10px rgba(80, 151, 150, 0.5);
     }
   `;
-  document.head.appendChild(style);
+  document.head.appendChild(styleEl);
 
   // ৩. ওভারলে
-  const overlay = document.createElement("div");
-  overlay.id = "cyberOverlay";
-  overlay.style.cssText = `
+  let overlayEl = document.createElement("div");
+  overlayEl.id = "cyberOverlay";
+  overlayEl.style.cssText = `
     position: fixed;
     inset: 0;
     background: rgba(235, 230, 222, 0.88);
@@ -264,18 +239,18 @@
     color: #7d7265;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   `;
-  overlay.innerHTML = `
+  overlayEl.innerHTML = `
     <div id="overlay-status-container">
       <div id="overlay-live-status">INITIALIZING...</div>
       <h1 style="font-size:22px;letter-spacing:6px;margin:0;opacity:0.6;color:#554e44;">SYSTEM ACTIVE</h1>
     </div>
   `;
-  document.body.appendChild(overlay);
+  document.body.appendChild(overlayEl);
 
-  // ৪. প্যানেল
-  const panel = document.createElement("div");
-  panel.id = "cyberPanel";
-  panel.innerHTML = `
+  // ৪. প্যানেল এইচটিএমএল
+  let panelEl = document.createElement("div");
+  panelEl.id = "cyberPanel";
+  panelEl.innerHTML = `
     <div class="cyber-header" id="cyberDragHeader">
       <div class="cyber-header-badge">⚡</div>
       <div class="cyber-header-title">
@@ -293,13 +268,13 @@
       </div>
 
       <div>
-        <label class="cyber-label">Amount Reference</label> 
+        <label class="cyber-label">Amount</label> 
         <input 
           type="text" 
           id="buyAmount" 
           class="cyber-input" 
           value="1000"
-          inputmode="numeric"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
         > 
       </div>
 
@@ -308,276 +283,230 @@
         <button id="stopBtn" class="cyber-btn stop-btn">STOP</button> 
       </div> 
 
-      <div class="cyber-status" id="cyberStatus">READY</div> 
-      <div class="cyber-info-box" id="cyberInfoBox"></div>
+      <div class="cyber-status" id="cyberStatus">Ready</div> 
     </div>
   `;
-  document.body.appendChild(panel);
+  document.body.appendChild(panelEl);
 
-  // এলিমেন্ট রেফারেন্স
   const statusEl = document.getElementById("cyberStatus");
-  const infoBox = document.getElementById("cyberInfoBox");
-  const liveStatus = document.getElementById("overlay-live-status");
+  const liveStatusEl = document.getElementById("overlay-live-status");
   const startBtn = document.getElementById("startBtn");
   const stopBtn = document.getElementById("stopBtn");
   const amountInput = document.getElementById("buyAmount");
   const orderToggle = document.getElementById("orderTypeToggle");
 
-  let isMonitoring = false;
+  let isRunning = false;
   let selectedOrderType = 1;
-  let lastMatchSignature = "";
-
-  // নেটওয়ার্ক ইন্টারসেপ্টর ব্যাকআপ
-  const originalFetch = window.fetch;
-  const originalXhrOpen = XMLHttpRequest.prototype.open;
-  const originalXhrSend = XMLHttpRequest.prototype.send;
-
-  amountInput.addEventListener("input", function () {
-    this.value = this.value.replace(/[^0-9]/g, "");
-  });
 
   orderToggle.querySelectorAll(".toggle-option").forEach((opt) => {
-    opt.addEventListener("click", () => {
+    opt.onclick = () => {
       orderToggle.querySelector(".active").classList.remove("active");
       opt.classList.add("active");
       selectedOrderType = Number(opt.dataset.value);
-    });
+    };
   });
 
-  function setStatus(text, mode) {
+  function logStatus(msg) {
+    console.log("[AutoBuy]", msg);
     if (!statusEl) return;
-    statusEl.innerText = text;
-    if (mode === "matched") {
-      statusEl.style.color = "#3d8573";
-      statusEl.style.border = "1px solid rgba(61, 133, 115, 0.5)";
-      statusEl.style.background = "#e0eee9";
-    } else if (mode === "waiting") {
-      statusEl.style.color = "#c5a059";
-      statusEl.style.border = "1px solid rgba(197, 160, 89, 0.5)";
-      statusEl.style.background = "#f7f2ea";
-    } else if (mode === "error") {
-      statusEl.style.color = "#ba5d58";
-      statusEl.style.border = "1px solid rgba(186, 93, 88, 0.4)";
-      statusEl.style.background = "#faeceb";
-    } else {
-      statusEl.style.color = "#7d7265";
-      statusEl.style.border = "none";
-      statusEl.style.background = "#ded7cd";
-    }
+    statusEl.innerText = msg;
+    const isErr = /error|stopped|failed|denied|🔴/i.test(msg);
+    const isOk = /success|matched|locked|🟢/i.test(msg);
+    statusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#7d7265";
+    statusEl.style.border = isErr
+      ? "1px solid rgba(186, 93, 88, 0.4)"
+      : isOk
+      ? "1px solid rgba(61, 133, 115, 0.4)"
+      : "none";
   }
 
-  function showDetails(data) {
-    if (!infoBox) return;
-    if (!data) {
-      infoBox.style.display = "none";
-      infoBox.innerHTML = "";
-      return;
-    }
-    infoBox.style.display = "block";
-    let html = "";
-    for (const [k, v] of Object.entries(data)) {
-      html += `
-        <div class="cyber-info-row">
-          <span>${k}:</span>
-          <span>${v ?? "N/A"}</span>
-        </div>
-      `;
-    }
-    infoBox.innerHTML = html;
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // ড্র্যাগিং সাপোর্ট
-  (function setupDrag() {
+  // ৫. টোকেন ও সেশন এক্সট্রাক্ট
+  let authToken = "";
+  try {
+    const rawToken = localStorage.getItem("token");
+    if (rawToken) {
+      try {
+        authToken = JSON.parse(rawToken)?.value || rawToken;
+      } catch {
+        authToken = rawToken;
+      }
+    }
+  } catch (e) {}
+
+  if (!authToken) {
+    logStatus("Token not found. Please log in.");
+    return;
+  }
+
+  const deviceCode = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
+  localStorage.setItem("arb_device_code", deviceCode);
+
+  // লগের সাথে শতভাগ মেলানো রিকোয়েস্ট হেডার
+  const apiHeaders = {
+    accept: "application/json, text/plain, */*",
+    "content-type": "application/json",
+    authorization: "Bearer " + authToken,
+    deviceId: "undefined",
+    deviceType: "3",
+    page: "Arb",
+    language: "1",
+    memberId: "22801760",
+    deviceCode: deviceCode
+  };
+
+  // ৬. ড্র্যাগ হ্যান্ডলার
+  (function initDraggable() {
     const header = document.getElementById("cyberDragHeader");
     let isDragging = false;
     let startX = 0, startY = 0;
 
-    function startDrag(e) {
+    function onStart(e) {
       isDragging = true;
       const x = e.touches ? e.touches[0].clientX : e.clientX;
       const y = e.touches ? e.touches[0].clientY : e.clientY;
-      startX = x - panel.offsetLeft;
-      startY = y - panel.offsetTop;
-      panel.style.transition = "none";
+      startX = x - panelEl.offsetLeft;
+      startY = y - panelEl.offsetTop;
+      panelEl.style.transition = "none";
     }
 
-    function doDrag(e) {
+    function onMove(e) {
       if (!isDragging) return;
       const x = e.touches ? e.touches[0].clientX : e.clientX;
       const y = e.touches ? e.touches[0].clientY : e.clientY;
-      panel.style.left = `${Math.max(10, Math.min(window.innerWidth - 290, x - startX))}px`;
-      panel.style.top = `${Math.max(10, Math.min(window.innerHeight - 350, y - startY))}px`;
-      panel.style.right = "auto";
-      panel.style.bottom = "auto";
+      panelEl.style.left = `${Math.max(10, Math.min(window.innerWidth - 290, x - startX))}px`;
+      panelEl.style.top = `${Math.max(10, Math.min(window.innerHeight - 320, y - startY))}px`;
+      panelEl.style.right = "auto";
+      panelEl.style.bottom = "auto";
     }
 
-    function stopDrag() {
+    function onEnd() {
       isDragging = false;
-      panel.style.transition = "box-shadow 0.3s ease";
+      panelEl.style.transition = "box-shadow 0.3s ease";
     }
 
-    header.addEventListener("mousedown", startDrag);
-    document.addEventListener("mousemove", doDrag);
-    document.addEventListener("mouseup", stopDrag);
-
-    header.addEventListener("touchstart", startDrag, { passive: true });
-    document.addEventListener("touchmove", doDrag, { passive: true });
-    document.addEventListener("touchend", stopDrag);
+    header.addEventListener("mousedown", onStart);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
+    header.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchmove", onMove, { passive: true });
+    document.addEventListener("touchend", onEnd);
   })();
 
-  // নেস্টেড অবজেক্ট থেকে ডেটা খোঁজার ফাংশন
-  function extractKey(obj, keyList) {
-    if (!obj || typeof obj !== "object") return undefined;
-    for (const k of keyList) {
-      if (k in obj && obj[k] !== null && obj[k] !== undefined && obj[k] !== "") {
-        return obj[k];
-      }
-    }
-    for (const key of Object.keys(obj)) {
-      if (typeof obj[key] === "object") {
-        const val = extractKey(obj[key], keyList);
-        if (val !== undefined) return val;
-      }
-    }
-    return undefined;
-  }
+  // ৭. আসল অটো-ম্যাচ ও লক এক্সিকিউটর (Auto-Buy Engine)
+  async function runAutoBuyEngine(targetAmount, orderType) {
+    const baseUrl = "https://apiweb.payapiar.com";
+    
+    // আপনার লগে প্রাপ্ত সঠিক ব্যাংক ও কেওয়াইসি প্যারামিটার
+    const bankCode = orderType === 1 ? "paytm" : "moneyView";
+    const kycId = orderType === 1 ? "5844647" : "5265767";
 
-  // রিয়েল-টাইম রেসপন্স পার্সিং লজিক
-  function parseMatchResponse(json) {
-    if (!isMonitoring) return;
+    // সার্ভারের নতুন রেঞ্জ স্লট সেটআপ (১২১৪ এরর প্রতিরোধ করতে)
+    let minAmt = targetAmount;
+    let maxAmt = targetAmount <= 1000 ? 2000 : targetAmount * 2;
 
-    try {
-      const root = json && typeof json === "object" ? json : null;
-      if (!root) {
-        setStatus("INVALID RESPONSE", "error");
-        return;
-      }
-
-      const dataNode = root.data || root;
-      const matchInfo = dataNode.matchInfo || {};
-
-      // আপনার লেটেস্ট লগের স্ট্রাকচার অনুযায়ী ফিল্ডগুলো নেওয়া
-      const matchResult = String(dataNode.matchResult || matchInfo.matchResult || "UNKNOWN").toUpperCase();
-      const statusVal = matchInfo.status || dataNode.status || "COMPLETED";
-      const orderTypeVal = matchInfo.orderType ?? dataNode.orderType ?? selectedOrderType;
-      const minAmt = matchInfo.minAmount ?? dataNode.minAmount ?? "1000";
-      const maxAmt = matchInfo.maxAmount ?? dataNode.maxAmount ?? "2000";
-      const bankVal = matchInfo.buyBankCode || dataNode.buyBankCode || "paytm";
-      const lastMatch = matchInfo.lastMatchResult || dataNode.lastMatchResult || "NOT_MATCHED";
-
-      // HTML থেকে নয়, সরাসরি রেসপন্স থেকে KYC ID নেওয়া
-      let rawKyc = matchInfo.buyerKycId || dataNode.buyerKycId || extractKey(root, ["buyerKycId", "buyerKycld"]);
-      const kycVal = rawKyc !== undefined && rawKyc !== null && String(rawKyc).trim() !== "" ? String(rawKyc) : "5844647";
-
-      // ডুপ্লিকেট প্রতিরোধ
-      const currentSignature = `${kycVal}_${minAmt}_${maxAmt}_${matchResult}`;
-
-      console.log(`[Auto Buy Monitor] Match Result: ${matchResult} | Buyer KYC: ${kycVal}`);
-
-      if (matchResult === "MATCHED") {
-        if (currentSignature === lastMatchSignature) return;
-        lastMatchSignature = currentSignature;
-
-        setStatus("MATCH FOUND", "matched");
-        showDetails({
-          "Amount": minAmt === maxAmt ? `₹${minAmt}` : `₹${minAmt} - ₹${maxAmt}`,
-          "Order Type": orderTypeVal === 1 ? "OTP-UPI" : "BANK",
-          "Buyer KYC": kycVal,
-          "Bank": bankVal,
-          "Status": statusVal
-        });
-      } else {
-        lastMatchSignature = currentSignature;
-        setStatus("WAITING FOR MATCH", "waiting");
-        showDetails({
-          "Range": `₹${minAmt} - ₹${maxAmt}`,
-          "Order Type": orderTypeVal === 1 ? "OTP-UPI" : "BANK",
-          "Buyer KYC": kycVal,
-          "Bank": bankVal,
-          "Last Match": lastMatch,
-          "Status": statusVal
-        });
-      }
-    } catch (e) {
-      console.error("[Auto Buy Monitor] Parsing error:", e);
-      setStatus("INVALID JSON", "error");
-    }
-  }
-
-  // নেটওয়ার্ক স্নিফিং (Fetch এবং XHR ইন্টারসেপ্ট)
-  window.fetch = async function (...args) {
-    const res = await originalFetch.apply(this, args);
-    try {
-      const url = typeof args[0] === "string" ? args[0] : (args[0] && args[0].url) || "";
-      if (isMonitoring && url.includes("/ar-wallet/smartRangeBuy/match/start")) {
-        const cloned = res.clone();
-        cloned.json().then((json) => {
-          parseMatchResponse(json);
-        }).catch(() => {
-          if (isMonitoring) setStatus("INVALID JSON", "error");
-        });
-      }
-    } catch (err) {}
-    return res;
-  };
-
-  XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-    this._monitoredUrl = url;
-    return originalXhrOpen.apply(this, [method, url, ...rest]);
-  };
-
-  XMLHttpRequest.prototype.send = function (...args) {
-    this.addEventListener("load", function () {
+    while (isRunning) {
       try {
-        if (isMonitoring && this._monitoredUrl && String(this._monitoredUrl).includes("/ar-wallet/smartRangeBuy/match/start")) {
-          let json = null;
-          if (this.responseType === "" || this.responseType === "text") {
-            json = JSON.parse(this.responseText);
-          } else if (this.responseType === "json") {
-            json = this.response;
+        logStatus(`Scanning ₹${targetAmount}...`);
+
+        // ধাপ ১: ম্যাচিং পুলে রিকোয়েস্ট পাঠানো
+        const startRes = await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/start`, {
+          method: "POST",
+          headers: apiHeaders,
+          body: JSON.stringify({
+            minAmount: minAmt,
+            maxAmount: maxAmt,
+            orderType: orderType,
+            buyBankCode: bankCode,
+            buyerKycId: kycId
+          })
+        });
+
+        const startData = await startRes.json();
+
+        if (startData?.code === "1") {
+          // ধাপ ২: ম্যাচ রেজাল্ট চেক ও লক করা
+          let checks = 0;
+          while (isRunning && checks < 8) {
+            checks++;
+            const listRes = await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/scene/list`, {
+              method: "POST",
+              headers: apiHeaders,
+              body: JSON.stringify({ orderType: orderType })
+            });
+
+            const listData = await listRes.json();
+            const resData = listData?.data;
+
+            // যদি অর্ডার ম্যাচ হয়ে যায়
+            if (
+              resData?.matchResult === "MATCHED" || 
+              resData?.status === "COMPLETED" || 
+              resData?.pendingOrder
+            ) {
+              const matchedOrder = 
+                resData?.pendingOrder?.platformOrder || 
+                resData?.lastMatchResult?.platformOrder;
+
+              logStatus("🟢 ORDER MATCHED! LOCKING...");
+
+              // স্বয়ংক্রিয়ভাবে ক্যাশিয়ার/পেমেন্ট পেজে প্রবেশ
+              if (matchedOrder) {
+                location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
+              } else {
+                location.reload();
+              }
+              return;
+            }
+
+            logStatus(`Matching... (${checks})`);
+            await sleep(250);
           }
-          if (json) parseMatchResponse(json);
+        } else {
+          // যদি রেঞ্জ অ্যাডজাস্টমেন্ট লাগে
+          logStatus(startData?.msg || "Retrying...");
         }
-      } catch (err) {}
-    });
-    return originalXhrSend.apply(this, args);
-  };
 
-  // স্টার্ট ও স্টপ বাটন কন্ট্রোল
-  startBtn.addEventListener("click", () => {
-    if (isMonitoring) return;
-    isMonitoring = true;
-    lastMatchSignature = "";
+        await sleep(150);
+      } catch (err) {
+        logStatus("Network Sync Error");
+        await sleep(400);
+      }
+    }
+  }
 
-    showDetails(null);
-    overlay.style.display = "flex";
-    liveStatus.innerText = "INITIALIZING...";
+  // বাটন ইভেন্ট
+  startBtn.onclick = () => {
+    if (isRunning) return;
+    const amountVal = Number(amountInput.value);
+    if (!amountVal) {
+      logStatus("Enter amount");
+      return;
+    }
+
+    isRunning = true;
+    overlayEl.style.display = "flex";
+    liveStatusEl.innerText = "INITIALIZING...";
 
     setTimeout(() => {
-      liveStatus.innerText = "SYSTEM ACTIVE";
+      liveStatusEl.innerText = "SYSTEM ACTIVE";
       setTimeout(() => {
-        overlay.style.display = "none";
-        setStatus("SYSTEM ACTIVE");
-        setTimeout(() => {
-          if (isMonitoring && statusEl.innerText === "SYSTEM ACTIVE") {
-            setStatus("MONITORING...");
-          }
-        }, 700);
-      }, 450);
+        overlayEl.style.display = "none";
+        logStatus(`🟢 Running | ₹${amountVal}`);
+        runAutoBuyEngine(amountVal, selectedOrderType);
+      }, 400);
     }, 400);
+  };
 
-    console.log("[Auto Buy Monitor] Started. Waiting for match request...");
-  });
+  stopBtn.onclick = () => {
+    isRunning = false;
+    overlayEl.style.display = "none";
+    logStatus("🔴 Stopped");
+  };
 
-  stopBtn.addEventListener("click", () => {
-    isMonitoring = false;
-    lastMatchSignature = "";
-    overlay.style.display = "none";
-    setStatus("STOPPED");
-    showDetails(null);
-    console.log("[Auto Buy Monitor] Stopped.");
-  });
-
-  console.log("[Auto Buy Monitor] Loaded successfully. Ready to monitor.");
+  logStatus("Ready");
 })();
         
