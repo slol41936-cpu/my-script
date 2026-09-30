@@ -1,5 +1,5 @@
 (async function () {
-  // ১. ডুপ্লিকেট প্যানেল ক্লিনআপ
+  // ১. পূর্বের প্যানেল ও ওভারলে ক্লিনআপ
   const oldPanel = document.getElementById("cyberPanel");
   if (oldPanel) oldPanel.remove();
   const oldOverlay = document.getElementById("cyberOverlay");
@@ -227,7 +227,7 @@
   `;
   document.head.appendChild(styleEl);
 
-  // ৩. স্ক্রিন ব্লার ওভারলে (স্থায়ী ও লাইভ আপডেটযোগ্য)
+  // ৩. স্থায়ী ব্লার ওভারলে
   let overlayEl = document.createElement("div");
   overlayEl.id = "cyberOverlay";
   overlayEl.style.cssText = `
@@ -309,13 +309,11 @@
     };
   });
 
-  // স্ট্যাটাস লগার: প্যানেল ও স্ক্রিনের মাঝখানের ওভারলে দুটিতেই একসাথে টেক্সট পাঠাবে
   function logStatus(msg) {
     console.log("[AutoBuy]", msg);
     const isErr = /error|stopped|failed|denied|ignored|⚠️|🔴/i.test(msg);
     const isOk = /success|matched|locked|🟢/i.test(msg);
 
-    // প্যানেলের নিচের ছোট স্ট্যাটাস বক্স
     if (statusEl) {
       statusEl.innerText = msg;
       statusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#7d7265";
@@ -326,7 +324,6 @@
         : "none";
     }
 
-    // স্ক্রিনের মাঝখানের বড় টেক্সট
     if (liveStatusEl) {
       liveStatusEl.innerText = msg;
       liveStatusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#509796";
@@ -374,7 +371,7 @@
     deviceCode: deviceCode
   };
 
-  // ড্র্যাগ কন্ট্রোল
+  // ড্র্যাগিং সাপোর্ট
   (function initDraggable() {
     const header = document.getElementById("cyberDragHeader");
     let isDragging = false;
@@ -412,7 +409,28 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // এক্সিকিউটর ইঞ্জিন
+  // নেস্টেড অবজেক্ট থেকে অ্যামাউন্ট উদ্ধারের নিখুঁত হেল্পার
+  function extractMatchedAmount(dataObj) {
+    if (!dataObj || typeof dataObj !== "object") return null;
+    const candidates = [
+      dataObj.amount,
+      dataObj.buyAmount,
+      dataObj.orderAmount,
+      dataObj.pendingOrder?.amount,
+      dataObj.pendingOrder?.buyAmount,
+      dataObj.pendingOrder?.orderAmount,
+      dataObj.lastMatchResult?.amount,
+      dataObj.lastMatchResult?.buyAmount
+    ];
+    for (const val of candidates) {
+      if (val !== undefined && val !== null && val !== "" && !isNaN(Number(val))) {
+        return Math.round(Number(val));
+      }
+    }
+    return null;
+  }
+
+  // এক্সিকিউটর ইঞ্জিন (কঠোর এক্স্যাক্ট অ্যামাউন্ট ফিল্টারিং)
   async function runAutoBuyEngine(targetAmount, orderType) {
     const baseUrl = "https://apiweb.payapiar.com";
     const bankCode = orderType === 1 ? "paytm" : "moneyView";
@@ -470,13 +488,14 @@
               resData?.pendingOrder
             ) {
               const orderObj = resData?.pendingOrder || resData?.lastMatchResult || {};
-              const matchedOrder = orderObj?.platformOrder;
-              const matchedAmount = Number(orderObj?.amount || resData?.amount || 0);
+              const matchedOrder = orderObj?.platformOrder || resData?.platformOrder;
+              const matchedAmount = extractMatchedAmount(resData);
 
-              // ফিল্টারিং: কাঙ্ক্ষিত অ্যামাউন্ট ছাড়া অন্য কিছু এলে ইগনোর
-              if (matchedAmount > 0 && matchedAmount !== targetAmount) {
-                logStatus(`⚠️ Ignored ₹${matchedAmount}`);
+              // কঠোর ভ্যালিডেশন: যদি মান পাওয়া যায় এবং তা ঠিক targetAmount না হয়
+              if (matchedAmount !== null && matchedAmount !== targetAmount) {
+                logStatus(`⚠️ Ignored ₹${matchedAmount} (Not ₹${targetAmount})`);
                 
+                // অবাঞ্ছিত অর্ডারটি ছেড়ে দিতে তাৎক্ষণিক ক্যানসেল কল
                 try {
                   await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
                     method: "POST",
@@ -486,17 +505,19 @@
                 } catch (e) {}
 
                 await sleep(500);
-                break;
+                break; // পুনরায় ১০০০ টাকার খোঁজে নতুন রাউন্ডে যাবে
               }
 
-              // টার্গেট অ্যামাউন্ট লক হলে
-              logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
-              if (matchedOrder) {
-                location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
-              } else {
-                location.reload();
+              // অ্যামাউন্ট যদি নিশ্চিতভাবে টার্গেটের সাথে মিলে যায়
+              if (matchedAmount === targetAmount || matchedAmount === null) {
+                logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
+                if (matchedOrder) {
+                  location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
+                } else {
+                  location.reload();
+                }
+                return;
               }
-              return;
             }
 
             logStatus(`Matching (${checks})...`);
@@ -524,7 +545,7 @@
     }
 
     isRunning = true;
-    overlayEl.style.display = "flex"; // ব্লার ব্যাকগ্রাউন্ড অন থাকবে
+    overlayEl.style.display = "flex";
     logStatus("INITIALIZING...");
 
     setTimeout(() => {
@@ -535,7 +556,7 @@
 
   stopBtn.onclick = () => {
     isRunning = false;
-    overlayEl.style.display = "none"; // ব্লার ব্যাকগ্রাউন্ড হাইড হবে
+    overlayEl.style.display = "none";
     logStatus("🔴 Stopped");
   };
 
