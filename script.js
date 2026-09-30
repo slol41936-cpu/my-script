@@ -1,5 +1,5 @@
 (async function () {
-  // ১. ডুপ্লিকেট এলিমেন্ট ক্লিনআপ
+  // ১. ডুপ্লিকেট প্যানেল ক্লিনআপ
   const oldPanel = document.getElementById("cyberPanel");
   if (oldPanel) oldPanel.remove();
   const oldOverlay = document.getElementById("cyberOverlay");
@@ -7,7 +7,7 @@
   const oldStyle = document.getElementById("cyberStyle");
   if (oldStyle) oldStyle.remove();
 
-  // ২. আপনার অরিজিনাল বেইজ ডিজাইন সিএসএস
+  // ২. সিএসএস ইনজেকশন (অরিজিনাল বেইজ সাইবার ডিজাইন)
   const styleEl = document.createElement("style");
   styleEl.id = "cyberStyle";
   styleEl.innerHTML = `
@@ -268,7 +268,7 @@
       </div>
 
       <div>
-        <label class="cyber-label">Amount</label> 
+        <label class="cyber-label">Exact Amount</label> 
         <input 
           type="text" 
           id="buyAmount" 
@@ -310,7 +310,7 @@
     console.log("[AutoBuy]", msg);
     if (!statusEl) return;
     statusEl.innerText = msg;
-    const isErr = /error|stopped|failed|denied|🔴/i.test(msg);
+    const isErr = /error|stopped|failed|denied|ignored|⚠️|🔴/i.test(msg);
     const isOk = /success|matched|locked|🟢/i.test(msg);
     statusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#7d7265";
     statusEl.style.border = isErr
@@ -324,7 +324,6 @@
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // ৫. টোকেন ও সেশন এক্সট্রাক্ট
   let authToken = "";
   try {
     const rawToken = localStorage.getItem("token");
@@ -338,14 +337,13 @@
   } catch (e) {}
 
   if (!authToken) {
-    logStatus("Token not found. Please log in.");
+    logStatus("Token not found. Log in first.");
     return;
   }
 
   const deviceCode = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", deviceCode);
 
-  // লগের সাথে শতভাগ মেলানো রিকোয়েস্ট হেডার
   const apiHeaders = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -358,7 +356,7 @@
     deviceCode: deviceCode
   };
 
-  // ৬. ড্র্যাগ হ্যান্ডলার
+  // ড্র্যাগ কন্ট্রোল
   (function initDraggable() {
     const header = document.getElementById("cyberDragHeader");
     let isDragging = false;
@@ -396,23 +394,19 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // ৭. আসল অটো-ম্যাচ ও লক এক্সিকিউটর (Auto-Buy Engine)
+  // আসল এক্সিকিউটর (অবাঞ্ছিত অ্যামাউন্ট ফিল্টারিং সহ)
   async function runAutoBuyEngine(targetAmount, orderType) {
     const baseUrl = "https://apiweb.payapiar.com";
-    
-    // আপনার লগে প্রাপ্ত সঠিক ব্যাংক ও কেওয়াইসি প্যারামিটার
     const bankCode = orderType === 1 ? "paytm" : "moneyView";
     const kycId = orderType === 1 ? "5844647" : "5265767";
 
-    // সার্ভারের নতুন রেঞ্জ স্লট সেটআপ (১২১৪ এরর প্রতিরোধ করতে)
     let minAmt = targetAmount;
     let maxAmt = targetAmount <= 1000 ? 2000 : targetAmount * 2;
 
     while (isRunning) {
       try {
-        logStatus(`Scanning ₹${targetAmount}...`);
+        logStatus(`Matching ₹${targetAmount}...`);
 
-        // ধাপ ১: ম্যাচিং পুলে রিকোয়েস্ট পাঠানো
         const startRes = await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/start`, {
           method: "POST",
           headers: apiHeaders,
@@ -427,8 +421,14 @@
 
         const startData = await startRes.json();
 
+        // 1083 (Frequent operation) এরর এলে সাময়িক পজ
+        if (startData?.code === "1083") {
+          logStatus("Rate limited. Waiting 1.5s...");
+          await sleep(1500);
+          continue;
+        }
+
         if (startData?.code === "1") {
-          // ধাপ ২: ম্যাচ রেজাল্ট চেক ও লক করা
           let checks = 0;
           while (isRunning && checks < 8) {
             checks++;
@@ -441,19 +441,40 @@
             const listData = await listRes.json();
             const resData = listData?.data;
 
-            // যদি অর্ডার ম্যাচ হয়ে যায়
+            if (listData?.code === "1083") {
+              await sleep(1000);
+              continue;
+            }
+
+            // ম্যাচিং চেক
             if (
               resData?.matchResult === "MATCHED" || 
               resData?.status === "COMPLETED" || 
               resData?.pendingOrder
             ) {
-              const matchedOrder = 
-                resData?.pendingOrder?.platformOrder || 
-                resData?.lastMatchResult?.platformOrder;
+              const orderObj = resData?.pendingOrder || resData?.lastMatchResult || {};
+              const matchedOrder = orderObj?.platformOrder;
+              const matchedAmount = Number(orderObj?.amount || resData?.amount || 0);
 
-              logStatus("🟢 ORDER MATCHED! LOCKING...");
+              // ফিল্টার লজিক: টার্গেট অ্যামাউন্টের সাথে তুলনা
+              if (matchedAmount > 0 && matchedAmount !== targetAmount) {
+                logStatus(`⚠️ Ignored ₹${matchedAmount} (Not ₹${targetAmount})`);
+                
+                // অবাঞ্ছিত অর্ডারটি ছেড়ে দিতে ক্যানসেল কল
+                try {
+                  await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
+                    method: "POST",
+                    headers: apiHeaders,
+                    body: JSON.stringify({ orderType: orderType })
+                  });
+                } catch (e) {}
 
-              // স্বয়ংক্রিয়ভাবে ক্যাশিয়ার/পেমেন্ট পেজে প্রবেশ
+                await sleep(600);
+                break; // লুপ ভেঙে পুনরায় নতুন টার্গেট ম্যাচিং শুরু করবে
+              }
+
+              // কাঙ্ক্ষিত অ্যামাউন্ট পাওয়া গেলে ক্যাশিয়ারে প্রবেশ
+              logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
               if (matchedOrder) {
                 location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
               } else {
@@ -463,22 +484,21 @@
             }
 
             logStatus(`Matching... (${checks})`);
-            await sleep(250);
+            await sleep(400); // 1083 এড়াতে নিরাপদ ইন্টারভাল
           }
         } else {
-          // যদি রেঞ্জ অ্যাডজাস্টমেন্ট লাগে
           logStatus(startData?.msg || "Retrying...");
         }
 
-        await sleep(150);
+        await sleep(500);
       } catch (err) {
-        logStatus("Network Sync Error");
-        await sleep(400);
+        logStatus("Sync Error. Retrying...");
+        await sleep(800);
       }
     }
   }
 
-  // বাটন ইভেন্ট
+  // বাটন কন্ট্রোল
   startBtn.onclick = () => {
     if (isRunning) return;
     const amountVal = Number(amountInput.value);
@@ -495,7 +515,7 @@
       liveStatusEl.innerText = "SYSTEM ACTIVE";
       setTimeout(() => {
         overlayEl.style.display = "none";
-        logStatus(`🟢 Running | ₹${amountVal}`);
+        logStatus(`🟢 Target ₹${amountVal}`);
         runAutoBuyEngine(amountVal, selectedOrderType);
       }, 400);
     }, 400);
@@ -509,4 +529,4 @@
 
   logStatus("Ready");
 })();
-        
+ 
