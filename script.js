@@ -7,7 +7,7 @@
   const oldStyle = document.getElementById("cyberStyle");
   if (oldStyle) oldStyle.remove();
 
-  // ২. সিএসএস ইনজেকশন
+  // ২. সিএসএস ইনজেকশন (অরিজিনাল বেইজ সাইবার ডিজাইন)
   const styleEl = document.createElement("style");
   styleEl.id = "cyberStyle";
   styleEl.innerHTML = `
@@ -214,17 +214,20 @@
     }
 
     #overlay-live-status {
-      font-size: 18px;
+      font-size: 20px;
       color: #509796;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
+      letter-spacing: 2px;
       margin-bottom: 5px;
-      text-shadow: 0 0 10px rgba(80, 151, 150, 0.5);
+      text-shadow: 0 0 12px rgba(80, 151, 150, 0.6);
+      font-weight: 800;
+      text-align: center;
+      padding: 0 20px;
     }
   `;
   document.head.appendChild(styleEl);
 
-  // ৩. ওভারলে
+  // ৩. স্ক্রিন ব্লার ওভারলে (স্থায়ী ও লাইভ আপডেটযোগ্য)
   let overlayEl = document.createElement("div");
   overlayEl.id = "cyberOverlay";
   overlayEl.style.cssText = `
@@ -247,7 +250,7 @@
   `;
   document.body.appendChild(overlayEl);
 
-  // ৪. প্যানেল
+  // ৪. প্যানেল এইচটিএমএল
   let panelEl = document.createElement("div");
   panelEl.id = "cyberPanel";
   panelEl.innerHTML = `
@@ -306,17 +309,33 @@
     };
   });
 
+  // স্ট্যাটাস লগার: প্যানেল ও স্ক্রিনের মাঝখানের ওভারলে দুটিতেই একসাথে টেক্সট পাঠাবে
   function logStatus(msg) {
-    if (!statusEl) return;
-    statusEl.innerText = msg;
+    console.log("[AutoBuy]", msg);
     const isErr = /error|stopped|failed|denied|ignored|⚠️|🔴/i.test(msg);
     const isOk = /success|matched|locked|🟢/i.test(msg);
-    statusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#7d7265";
-    statusEl.style.border = isErr
-      ? "1px solid rgba(186, 93, 88, 0.4)"
-      : isOk
-      ? "1px solid rgba(61, 133, 115, 0.4)"
-      : "none";
+
+    // প্যানেলের নিচের ছোট স্ট্যাটাস বক্স
+    if (statusEl) {
+      statusEl.innerText = msg;
+      statusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#7d7265";
+      statusEl.style.border = isErr
+        ? "1px solid rgba(186, 93, 88, 0.4)"
+        : isOk
+        ? "1px solid rgba(61, 133, 115, 0.4)"
+        : "none";
+    }
+
+    // স্ক্রিনের মাঝখানের বড় টেক্সট
+    if (liveStatusEl) {
+      liveStatusEl.innerText = msg;
+      liveStatusEl.style.color = isErr ? "#ba5d58" : isOk ? "#3d8573" : "#509796";
+      liveStatusEl.style.textShadow = isErr 
+        ? "0 0 12px rgba(186, 93, 88, 0.6)" 
+        : isOk 
+        ? "0 0 12px rgba(61, 133, 115, 0.6)" 
+        : "0 0 12px rgba(80, 151, 150, 0.6)";
+    }
   }
 
   function sleep(ms) {
@@ -393,7 +412,7 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // নিরাপদ ও স্থিতিশীল এক্সিকিউটর
+  // এক্সিকিউটর ইঞ্জিন
   async function runAutoBuyEngine(targetAmount, orderType) {
     const baseUrl = "https://apiweb.payapiar.com";
     const bankCode = orderType === 1 ? "paytm" : "moneyView";
@@ -420,9 +439,8 @@
 
         const startData = await startRes.json();
 
-        // 1083 কোড এলে সার্ভার রেট-লিমিট এড়িয়ে বিরতি নেওয়া
         if (startData?.code === "1083") {
-          logStatus("Cooling down 2s...");
+          logStatus("Rate limited. Pausing 2s...");
           await sleep(2000);
           continue;
         }
@@ -445,7 +463,7 @@
               continue;
             }
 
-            // ম্যাচিং টেস্ট
+            // ম্যাচিং চেক
             if (
               resData?.matchResult === "MATCHED" || 
               resData?.status === "COMPLETED" || 
@@ -455,7 +473,7 @@
               const matchedOrder = orderObj?.platformOrder;
               const matchedAmount = Number(orderObj?.amount || resData?.amount || 0);
 
-              // ফিল্টারিং: টার্গেট অ্যামাউন্ট ব্যতীত অন্য যেকোনো অ্যামাউন্ট বাতিল করা
+              // ফিল্টারিং: কাঙ্ক্ষিত অ্যামাউন্ট ছাড়া অন্য কিছু এলে ইগনোর
               if (matchedAmount > 0 && matchedAmount !== targetAmount) {
                 logStatus(`⚠️ Ignored ₹${matchedAmount}`);
                 
@@ -471,7 +489,7 @@
                 break;
               }
 
-              // সঠিক অ্যামাউন্ট হলে ক্যাশিয়ার পেজে রিডাইরেক্ট
+              // টার্গেট অ্যামাউন্ট লক হলে
               logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
               if (matchedOrder) {
                 location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
@@ -482,13 +500,13 @@
             }
 
             logStatus(`Matching (${checks})...`);
-            await sleep(280); // ব্যালেন্সড নিরাপদ পোলিং টাইম
+            await sleep(280);
           }
         } else {
           logStatus(startData?.msg || "Retrying...");
         }
 
-        await sleep(350); // স্বাভাবিক ইন্টারভাল
+        await sleep(350);
       } catch (err) {
         logStatus("Network Sync Error");
         await sleep(600);
@@ -506,24 +524,21 @@
     }
 
     isRunning = true;
-    overlayEl.style.display = "flex";
-    liveStatusEl.innerText = "INITIALIZING...";
+    overlayEl.style.display = "flex"; // ব্লার ব্যাকগ্রাউন্ড অন থাকবে
+    logStatus("INITIALIZING...");
 
     setTimeout(() => {
-      liveStatusEl.innerText = "SYSTEM ACTIVE";
-      setTimeout(() => {
-        overlayEl.style.display = "none";
-        logStatus(`🟢 Target ₹${amountVal}`);
-        runAutoBuyEngine(amountVal, selectedOrderType);
-      }, 300);
-    }, 300);
+      logStatus(`🟢 Target ₹${amountVal}`);
+      runAutoBuyEngine(amountVal, selectedOrderType);
+    }, 400);
   };
 
   stopBtn.onclick = () => {
     isRunning = false;
-    overlayEl.style.display = "none";
+    overlayEl.style.display = "none"; // ব্লার ব্যাকগ্রাউন্ড হাইড হবে
     logStatus("🔴 Stopped");
   };
 
   logStatus("Ready");
 })();
+    
