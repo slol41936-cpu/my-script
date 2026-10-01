@@ -7,7 +7,7 @@
   const oldStyle = document.getElementById("cyberStyle");
   if (oldStyle) oldStyle.remove();
 
-  // ২. সিএসএস ইনজেকশন
+  // ২. সিএসএস ইনজেকশন (অরিজিনাল বেইজ সাইবার ডিজাইন)
   const styleEl = document.createElement("style");
   styleEl.id = "cyberStyle";
   styleEl.innerHTML = `
@@ -227,7 +227,7 @@
   `;
   document.head.appendChild(styleEl);
 
-  // ৩. ব্লার ওভারলে
+  // ৩. ব্লার ওভারলে (ডিফল্ট বন্ধ থাকবে)
   let overlayEl = document.createElement("div");
   overlayEl.id = "cyberOverlay";
   overlayEl.style.cssText = `
@@ -250,7 +250,7 @@
   `;
   document.body.appendChild(overlayEl);
 
-  // ৪. প্যানেল এইচটিএমএল
+  // ৪. প্যানেল এইচটিএমএল সরাসরি রেন্ডার
   let panelEl = document.createElement("div");
   panelEl.id = "cyberPanel";
   panelEl.innerHTML = `
@@ -286,7 +286,7 @@
         <button id="stopBtn" class="cyber-btn stop-btn">STOP</button> 
       </div> 
 
-      <div class="cyber-status" id="cyberStatus">Ready</div> 
+      <div class="cyber-status" id="cyberStatus">Checking Access...</div> 
     </div>
   `;
   document.body.appendChild(panelEl);
@@ -301,6 +301,7 @@
   let isRunning = false;
   let selectedOrderType = 1;
   let isPremiumUser = false;
+  let isAccessGranted = false;
   let syncInterval = null;
 
   orderToggle.querySelectorAll(".toggle-option").forEach((opt) => {
@@ -341,155 +342,7 @@
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // ফায়ারবেস স্ক্রিপ্ট লোডার
-  async function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
-  // ফায়ারবেস ইনিশিয়ালাইজেশন
-  if (!window.firebase) {
-    await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-    await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
-  }
-
-  if (!firebase.apps.length) {
-    firebase.initializeApp({
-      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-      authDomain: "my-ar-automation.firebaseapp.com",
-      projectId: "my-ar-automation",
-      storageBucket: "my-ar-automation.firebasestorage.app",
-      messagingSenderId: "443374813761",
-      appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
-    });
-  }
-
-  // ফায়ারবেস অথেন্টিকেশন ও পারমিশন চেক
-  async function verifyMembership() {
-    try {
-      const localData = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      const memberId = localData?.value?.memberId || localData?.value?.memberld || localData?.memberId;
-      if (!memberId) return { allowed: false, isPremium: false };
-
-      const snapshot = await firebase.firestore().collection("members")
-        .where("walletUserId", "==", String(memberId))
-        .where("active", "==", true)
-        .limit(1)
-        .get();
-
-      if (snapshot.empty) return { allowed: false, isPremium: false };
-
-      const docData = snapshot.docs[0].data();
-      return { allowed: true, isPremium: docData.is_premium === true };
-    } catch (e) {
-      return { allowed: false, isPremium: false };
-    }
-  }
-
-  // ব্যালেন্স সিঙ্ক ফাংশন
-  async function syncBalance() {
-    try {
-      const localData = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      const memberId = localData?.value?.memberId || localData?.value?.memberld;
-      const currentBal = localData?.balance ?? localData?.value?.balance;
-      if (!memberId || currentBal === undefined || currentBal === null) return;
-
-      const db = firebase.firestore();
-      const snap = await db.collection("members").where("walletUserId", "==", String(memberId)).limit(1).get();
-      if (snap.empty) return;
-
-      const doc = snap.docs[0];
-      const prevBal = Number(doc.data().balance ?? 0);
-      const newBal = Number(currentBal);
-      if (prevBal === newBal) return;
-
-      const diff = newBal - prevBal;
-      await db.collection("transactions").add({
-        walletUserId: String(memberId),
-        previousBalance: prevBal,
-        updatedBalance: newBal,
-        amount: Math.abs(diff),
-        type: diff > 0 ? "credit" : "debit",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await db.collection("members").doc(doc.id).update({
-        balance: newBal,
-        balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } catch (e) {}
-  }
-
-  // পারমিশন ভ্যালিডেশন যাচাই
-  const authCheck = await verifyMembership();
-  if (!authCheck.allowed) {
-    logStatus("Access denied");
-    startBtn.disabled = true;
-    startBtn.style.opacity = "0.5";
-    return;
-  }
-
-  isPremiumUser = authCheck.isPremium;
-  syncBalance();
-  if (!syncInterval) syncInterval = setInterval(syncBalance, 15000);
-
-  // প্রিমিয়াম রুলস অনুযায়ী ইনপুট কন্ট্রোল
-  function validateAmountInput() {
-    const val = Number(amountInput.value);
-    if (!isPremiumUser && val < 1000) {
-      startBtn.disabled = true;
-      startBtn.style.opacity = "0.5";
-      startBtn.style.cursor = "not-allowed";
-    } else {
-      startBtn.disabled = false;
-      startBtn.style.opacity = "1";
-      startBtn.style.cursor = "pointer";
-    }
-  }
-  amountInput.addEventListener("input", validateAmountInput);
-  validateAmountInput();
-
-  // লোকাল টোকেন ও হেডার প্রস্তুতি
-  let authToken = "";
-  try {
-    const rawToken = localStorage.getItem("token");
-    if (rawToken) {
-      try {
-        authToken = JSON.parse(rawToken)?.value || rawToken;
-      } catch {
-        authToken = rawToken;
-      }
-    }
-  } catch (e) {}
-
-  if (!authToken) {
-    logStatus("Token not found. Log in first.");
-    return;
-  }
-
-  const deviceCode = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
-  localStorage.setItem("arb_device_code", deviceCode);
-
-  const localUserInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-  const dynMemberId = String(localUserInfo?.value?.memberId || localUserInfo?.value?.memberld || "22801760");
-
-  const apiHeaders = {
-    accept: "application/json, text/plain, */*",
-    "content-type": "application/json",
-    authorization: "Bearer " + authToken,
-    deviceId: "undefined",
-    deviceType: "3",
-    page: "Arb",
-    language: "1",
-    memberId: dynMemberId,
-    deviceCode: deviceCode
-  };
-
-  // ড্র্যাগিং সাপোর্ট
+  // ড্র্যাগ কন্ট্রোল
   (function initDraggable() {
     const header = document.getElementById("cyberDragHeader");
     let isDragging = false;
@@ -527,7 +380,138 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // লগের সঠিক নোড থেকে স্ট্রিক্ট অ্যামাউন্ট রিডার
+  // ৫. ফায়ারবেস স্ক্রিপ্ট লোডার ও মেম্বার ভ্যালিডেশন
+  async function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function initFirebaseAndAuth() {
+    try {
+      if (!window.firebase) {
+        await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
+        await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
+      }
+
+      if (!firebase.apps.length) {
+        firebase.initializeApp({
+          apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
+          authDomain: "my-ar-automation.firebaseapp.com",
+          projectId: "my-ar-automation",
+          storageBucket: "my-ar-automation.firebasestorage.app",
+          messagingSenderId: "443374813761",
+          appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
+        });
+      }
+
+      const localData = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const memberId = localData?.value?.memberId || localData?.value?.memberld || localData?.memberId;
+      if (!memberId) {
+        logStatus("User not found");
+        return;
+      }
+
+      const snapshot = await firebase.firestore().collection("members")
+        .where("walletUserId", "==", String(memberId))
+        .where("active", "==", true)
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        logStatus("Access denied");
+        startBtn.disabled = true;
+        startBtn.style.opacity = "0.5";
+        return;
+      }
+
+      const docData = snapshot.docs[0].data();
+      isAccessGranted = true;
+      isPremiumUser = docData.is_premium === true;
+      logStatus("Ready");
+
+      // ব্যালেন্স সিঙ্ক
+      syncBalance();
+      if (!syncInterval) syncInterval = setInterval(syncBalance, 15000);
+
+    } catch (e) {
+      console.error(e);
+      logStatus("Firebase Error");
+    }
+  }
+
+  // ব্যালেন্স সিঙ্ক ফাংশন
+  async function syncBalance() {
+    try {
+      const localData = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const memberId = localData?.value?.memberId || localData?.value?.memberld;
+      const currentBal = localData?.balance ?? localData?.value?.balance;
+      if (!memberId || currentBal === undefined || currentBal === null) return;
+
+      const db = firebase.firestore();
+      const snap = await db.collection("members").where("walletUserId", "==", String(memberId)).limit(1).get();
+      if (snap.empty) return;
+
+      const doc = snap.docs[0];
+      const prevBal = Number(doc.data().balance ?? 0);
+      const newBal = Number(currentBal);
+      if (prevBal === newBal) return;
+
+      const diff = newBal - prevBal;
+      await db.collection("transactions").add({
+        walletUserId: String(memberId),
+        previousBalance: prevBal,
+        updatedBalance: newBal,
+        amount: Math.abs(diff),
+        type: diff > 0 ? "credit" : "debit",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection("members").doc(doc.id).update({
+        balance: newBal,
+        balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {}
+  }
+
+  // ব্যাকগ্রাউন্ডে সিকিউরিটি চেক কল
+  initFirebaseAndAuth();
+
+  // লোকাল টোকেন ও হেডার প্রস্তুতি
+  let authToken = "";
+  try {
+    const rawToken = localStorage.getItem("token");
+    if (rawToken) {
+      try {
+        authToken = JSON.parse(rawToken)?.value || rawToken;
+      } catch {
+        authToken = rawToken;
+      }
+    }
+  } catch (e) {}
+
+  const deviceCode = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
+  localStorage.setItem("arb_device_code", deviceCode);
+
+  const localUserInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const dynMemberId = String(localUserInfo?.value?.memberId || localUserInfo?.value?.memberld || "22801760");
+
+  const apiHeaders = {
+    accept: "application/json, text/plain, */*",
+    "content-type": "application/json",
+    authorization: "Bearer " + authToken,
+    deviceId: "undefined",
+    deviceType: "3",
+    page: "Arb",
+    language: "1",
+    memberId: dynMemberId,
+    deviceCode: deviceCode
+  };
+
+  // স্ট্রিক্ট অ্যামাউন্ট রিডার
   function getActualMatchedAmount(dataObj) {
     if (!dataObj || typeof dataObj !== "object") return null;
     const targetVal = 
@@ -545,7 +529,7 @@
     return null;
   }
 
-  // অবাঞ্ছিত অর্ডার বাতিল হ্যান্ডলার
+  // ক্যানসেল হ্যান্ডলার
   async function forceCancelOrder(baseUrl, orderNo, orderType) {
     try {
       if (orderNo) {
@@ -626,7 +610,7 @@
               const buyOrderNo = resData?.buyResult?.buyOrderNo || resData?.pendingOrder?.buyOrderNo;
               const platformOrder = resData?.buyResult?.platformOrder || resData?.pendingOrder?.platformOrder;
 
-              // ফিল্টারিং: অন্য অ্যামাউন্ট হলে তৎক্ষণাৎ ক্যানসেল
+              // ফিল্টারিং: অন্য অ্যামাউন্ট হলে ক্যানসেল
               if (matchedAmount && matchedAmount !== targetAmount) {
                 logStatus(`⚠️ Ignored ₹${matchedAmount} (Not ₹${targetAmount})`);
                 await forceCancelOrder(baseUrl, buyOrderNo, orderType);
@@ -634,7 +618,7 @@
                 break;
               }
 
-              // সঠিক অ্যামাউন্ট হলে লক করে ক্যাশিয়ারে নেওয়া
+              // সঠিক অ্যামাউন্ট হলে ক্যাশিয়ারে নেওয়া
               if (matchedAmount === targetAmount) {
                 logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
                 const finalOrder = platformOrder || buyOrderNo;
@@ -660,4 +644,29 @@
         }
 
         await sleep(350);
-      } catch (
+      } catch (err) {
+        logStatus("Network Sync Error");
+        await sleep(600);
+      }
+    }
+  }
+
+  // বাটন কন্ট্রোল
+  startBtn.onclick = () => {
+    if (!isAccessGranted) {
+      logStatus("Access denied");
+      return;
+    }
+    if (isRunning) return;
+    const amountVal = Number(amountInput.value);
+    if (!amountVal) {
+      logStatus("Enter amount");
+      return;
+    }
+
+    isRunning = true;
+    overlayEl.style.display = "flex";
+    logStatus("INITIALIZING...");
+
+    setTimeout(() => {
+      logStatus(`🟢 Targe
