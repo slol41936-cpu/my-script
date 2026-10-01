@@ -1,5 +1,5 @@
 (async function () {
-  // ১. পূর্বের প্যানেল ও ওভারলে ক্লিনআপ
+  // ১. ডুপ্লিকেট প্যানেল ক্লিনআপ
   const oldPanel = document.getElementById("cyberPanel");
   if (oldPanel) oldPanel.remove();
   const oldOverlay = document.getElementById("cyberOverlay");
@@ -409,28 +409,43 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // নেস্টেড অবজেক্ট থেকে অ্যামাউন্ট উদ্ধারের নিখুঁত হেল্পার
-  function extractMatchedAmount(dataObj) {
-    if (!dataObj || typeof dataObj !== "object") return null;
-    const candidates = [
-      dataObj.amount,
-      dataObj.buyAmount,
-      dataObj.orderAmount,
-      dataObj.pendingOrder?.amount,
-      dataObj.pendingOrder?.buyAmount,
-      dataObj.pendingOrder?.orderAmount,
-      dataObj.lastMatchResult?.amount,
-      dataObj.lastMatchResult?.buyAmount
+  // অবজেক্টের ভেতর থেকে নিখুঁতভাবে অ্যামাউন্ট খোঁজার ফাংশন
+  function findStrictAmount(obj) {
+    if (!obj || typeof obj !== "object") return null;
+
+    // ১. পরিচিত ডিরেক্ট পাথগুলো
+    const directFields = [
+      obj.buyResult?.amount,
+      obj.buyResult?.buyAmount,
+      obj.pendingOrder?.amount,
+      obj.pendingOrder?.buyAmount,
+      obj.pendingOrder?.orderAmount,
+      obj.lastMatchResult?.amount,
+      obj.lastMatchResult?.buyAmount,
+      obj.amount,
+      obj.buyAmount,
+      obj.orderAmount
     ];
-    for (const val of candidates) {
+
+    for (const val of directFields) {
       if (val !== undefined && val !== null && val !== "" && !isNaN(Number(val))) {
-        return Math.round(Number(val));
+        const parsed = Math.round(Number(val));
+        if (parsed > 0) return parsed;
       }
     }
+
+    // ২. যদি কোনো নেস্টেড অবজেক্টে লুকিয়ে থাকে (রিকার্সিভ সার্চ)
+    for (const key of Object.keys(obj)) {
+      if (typeof obj[key] === "object" && obj[key] !== null) {
+        const deepVal = findStrictAmount(obj[key]);
+        if (deepVal !== null) return deepVal;
+      }
+    }
+
     return null;
   }
 
-  // এক্সিকিউটর ইঞ্জিন (কঠোর এক্স্যাক্ট অ্যামাউন্ট ফিল্টারিং)
+  // এক্সিকিউটর ইঞ্জিন (শতভাগ নির্ভুল অ্যামাউন্ট ভ্যালিডেশন)
   async function runAutoBuyEngine(targetAmount, orderType) {
     const baseUrl = "https://apiweb.payapiar.com";
     const bankCode = orderType === 1 ? "paytm" : "moneyView";
@@ -481,21 +496,22 @@
               continue;
             }
 
-            // ম্যাচিং চেক
+            // যদি অর্ডার ম্যাচ হয়
             if (
               resData?.matchResult === "MATCHED" || 
               resData?.status === "COMPLETED" || 
-              resData?.pendingOrder
+              resData?.pendingOrder ||
+              resData?.buyResult
             ) {
-              const orderObj = resData?.pendingOrder || resData?.lastMatchResult || {};
+              const matchedAmount = findStrictAmount(resData);
+              const orderObj = resData?.pendingOrder || resData?.buyResult || resData?.lastMatchResult || {};
               const matchedOrder = orderObj?.platformOrder || resData?.platformOrder;
-              const matchedAmount = extractMatchedAmount(resData);
 
-              // কঠোর ভ্যালিডেশন: যদি মান পাওয়া যায় এবং তা ঠিক targetAmount না হয়
+              // ১. যদি অ্যামাউন্ট টার্গেটের সাথে না মেলে (যেমন: ১৫০০ বা ১০৫৭)
               if (matchedAmount !== null && matchedAmount !== targetAmount) {
                 logStatus(`⚠️ Ignored ₹${matchedAmount} (Not ₹${targetAmount})`);
-                
-                // অবাঞ্ছিত অর্ডারটি ছেড়ে দিতে তাৎক্ষণিক ক্যানসেল কল
+
+                // তৎক্ষণাৎ ক্যানসেল কল পাঠিয়ে ভুল অর্ডারটি ছেড়ে দেওয়া
                 try {
                   await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
                     method: "POST",
@@ -505,11 +521,11 @@
                 } catch (e) {}
 
                 await sleep(500);
-                break; // পুনরায় ১০০০ টাকার খোঁজে নতুন রাউন্ডে যাবে
+                break; // লুপ ভেঙে পুনরায় শুধু targetAmount খোঁজা শুরু করবে
               }
 
-              // অ্যামাউন্ট যদি নিশ্চিতভাবে টার্গেটের সাথে মিলে যায়
-              if (matchedAmount === targetAmount || matchedAmount === null) {
+              // ২. যদি অ্যামাউন্ট একদম নিখুঁতভাবে targetAmount (যেমন: ১০০০) হয়
+              if (matchedAmount === targetAmount) {
                 logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
                 if (matchedOrder) {
                   location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
@@ -517,6 +533,20 @@
                   location.reload();
                 }
                 return;
+              }
+
+              // ৩. যদি অ্যামাউন্ট কোনোভাবেই নিশ্চিত হওয়া না যায় (ভুল ঝুঁকি নেওয়া হবে না)
+              if (matchedAmount === null) {
+                logStatus("⚠️ Unknown Amount. Skipping...");
+                try {
+                  await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
+                    method: "POST",
+                    headers: apiHeaders,
+                    body: JSON.stringify({ orderType: orderType })
+                  });
+                } catch (e) {}
+                await sleep(500);
+                break;
               }
             }
 
@@ -562,4 +592,4 @@
 
   logStatus("Ready");
 })();
-    
+      
