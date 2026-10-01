@@ -1,5 +1,5 @@
 (async function () {
-  // ১. ডুপ্লিকেট প্যানেল ক্লিনআপ
+  // ১. ডুপ্লিকেট প্যানেল ও ওভারলে ক্লিনআপ
   const oldPanel = document.getElementById("cyberPanel");
   if (oldPanel) oldPanel.remove();
   const oldOverlay = document.getElementById("cyberOverlay");
@@ -7,7 +7,7 @@
   const oldStyle = document.getElementById("cyberStyle");
   if (oldStyle) oldStyle.remove();
 
-  // ২. সিএসএস ইনজেকশন (অরিজিনাল বেইজ সাইবার ডিজাইন)
+  // ২. সিএসএস ইনজেকশন
   const styleEl = document.createElement("style");
   styleEl.id = "cyberStyle";
   styleEl.innerHTML = `
@@ -227,7 +227,7 @@
   `;
   document.head.appendChild(styleEl);
 
-  // ৩. স্থায়ী ব্লার ওভারলে
+  // ৩. ব্লার ওভারলে
   let overlayEl = document.createElement("div");
   overlayEl.id = "cyberOverlay";
   overlayEl.style.cssText = `
@@ -300,6 +300,8 @@
 
   let isRunning = false;
   let selectedOrderType = 1;
+  let isPremiumUser = false;
+  let syncInterval = null;
 
   orderToggle.querySelectorAll(".toggle-option").forEach((opt) => {
     opt.onclick = () => {
@@ -339,6 +341,119 @@
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  // ফায়ারবেস স্ক্রিপ্ট লোডার
+  async function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  // ফায়ারবেস ইনিশিয়ালাইজেশন
+  if (!window.firebase) {
+    await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
+    await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
+  }
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp({
+      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
+      authDomain: "my-ar-automation.firebaseapp.com",
+      projectId: "my-ar-automation",
+      storageBucket: "my-ar-automation.firebasestorage.app",
+      messagingSenderId: "443374813761",
+      appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
+    });
+  }
+
+  // ফায়ারবেস অথেন্টিকেশন ও পারমিশন চেক
+  async function verifyMembership() {
+    try {
+      const localData = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const memberId = localData?.value?.memberId || localData?.value?.memberld || localData?.memberId;
+      if (!memberId) return { allowed: false, isPremium: false };
+
+      const snapshot = await firebase.firestore().collection("members")
+        .where("walletUserId", "==", String(memberId))
+        .where("active", "==", true)
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) return { allowed: false, isPremium: false };
+
+      const docData = snapshot.docs[0].data();
+      return { allowed: true, isPremium: docData.is_premium === true };
+    } catch (e) {
+      return { allowed: false, isPremium: false };
+    }
+  }
+
+  // ব্যালেন্স সিঙ্ক ফাংশন
+  async function syncBalance() {
+    try {
+      const localData = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const memberId = localData?.value?.memberId || localData?.value?.memberld;
+      const currentBal = localData?.balance ?? localData?.value?.balance;
+      if (!memberId || currentBal === undefined || currentBal === null) return;
+
+      const db = firebase.firestore();
+      const snap = await db.collection("members").where("walletUserId", "==", String(memberId)).limit(1).get();
+      if (snap.empty) return;
+
+      const doc = snap.docs[0];
+      const prevBal = Number(doc.data().balance ?? 0);
+      const newBal = Number(currentBal);
+      if (prevBal === newBal) return;
+
+      const diff = newBal - prevBal;
+      await db.collection("transactions").add({
+        walletUserId: String(memberId),
+        previousBalance: prevBal,
+        updatedBalance: newBal,
+        amount: Math.abs(diff),
+        type: diff > 0 ? "credit" : "debit",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection("members").doc(doc.id).update({
+        balance: newBal,
+        balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {}
+  }
+
+  // পারমিশন ভ্যালিডেশন যাচাই
+  const authCheck = await verifyMembership();
+  if (!authCheck.allowed) {
+    logStatus("Access denied");
+    startBtn.disabled = true;
+    startBtn.style.opacity = "0.5";
+    return;
+  }
+
+  isPremiumUser = authCheck.isPremium;
+  syncBalance();
+  if (!syncInterval) syncInterval = setInterval(syncBalance, 15000);
+
+  // প্রিমিয়াম রুলস অনুযায়ী ইনপুট কন্ট্রোল
+  function validateAmountInput() {
+    const val = Number(amountInput.value);
+    if (!isPremiumUser && val < 1000) {
+      startBtn.disabled = true;
+      startBtn.style.opacity = "0.5";
+      startBtn.style.cursor = "not-allowed";
+    } else {
+      startBtn.disabled = false;
+      startBtn.style.opacity = "1";
+      startBtn.style.cursor = "pointer";
+    }
+  }
+  amountInput.addEventListener("input", validateAmountInput);
+  validateAmountInput();
+
+  // লোকাল টোকেন ও হেডার প্রস্তুতি
   let authToken = "";
   try {
     const rawToken = localStorage.getItem("token");
@@ -359,6 +474,9 @@
   const deviceCode = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", deviceCode);
 
+  const localUserInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const dynMemberId = String(localUserInfo?.value?.memberId || localUserInfo?.value?.memberld || "22801760");
+
   const apiHeaders = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -367,7 +485,7 @@
     deviceType: "3",
     page: "Arb",
     language: "1",
-    memberId: "22801760",
+    memberId: dynMemberId,
     deviceCode: deviceCode
   };
 
@@ -409,50 +527,50 @@
     document.addEventListener("touchend", onEnd);
   })();
 
-  // অবজেক্টের ভেতর থেকে নিখুঁতভাবে অ্যামাউন্ট খোঁজার ফাংশন
-  function findStrictAmount(obj) {
-    if (!obj || typeof obj !== "object") return null;
+  // লগের সঠিক নোড থেকে স্ট্রিক্ট অ্যামাউন্ট রিডার
+  function getActualMatchedAmount(dataObj) {
+    if (!dataObj || typeof dataObj !== "object") return null;
+    const targetVal = 
+      dataObj.buyResult?.amount || 
+      dataObj.buyResult?.buyAmount || 
+      dataObj.pendingOrder?.amount || 
+      dataObj.pendingOrder?.buyAmount || 
+      dataObj.lastMatchResult?.amount || 
+      dataObj.amount;
 
-    // ১. পরিচিত ডিরেক্ট পাথগুলো
-    const directFields = [
-      obj.buyResult?.amount,
-      obj.buyResult?.buyAmount,
-      obj.pendingOrder?.amount,
-      obj.pendingOrder?.buyAmount,
-      obj.pendingOrder?.orderAmount,
-      obj.lastMatchResult?.amount,
-      obj.lastMatchResult?.buyAmount,
-      obj.amount,
-      obj.buyAmount,
-      obj.orderAmount
-    ];
-
-    for (const val of directFields) {
-      if (val !== undefined && val !== null && val !== "" && !isNaN(Number(val))) {
-        const parsed = Math.round(Number(val));
-        if (parsed > 0) return parsed;
-      }
+    if (targetVal !== undefined && targetVal !== null && targetVal !== "") {
+      const parsed = Math.round(parseFloat(targetVal));
+      if (!isNaN(parsed) && parsed > 0) return parsed;
     }
-
-    // ২. যদি কোনো নেস্টেড অবজেক্টে লুকিয়ে থাকে (রিকার্সিভ সার্চ)
-    for (const key of Object.keys(obj)) {
-      if (typeof obj[key] === "object" && obj[key] !== null) {
-        const deepVal = findStrictAmount(obj[key]);
-        if (deepVal !== null) return deepVal;
-      }
-    }
-
     return null;
   }
 
-  // এক্সিকিউটর ইঞ্জিন (শতভাগ নির্ভুল অ্যামাউন্ট ভ্যালিডেশন)
+  // অবাঞ্ছিত অর্ডার বাতিল হ্যান্ডলার
+  async function forceCancelOrder(baseUrl, orderNo, orderType) {
+    try {
+      if (orderNo) {
+        await fetch(`${baseUrl}/ar-wallet/buyCenter/cancelBuyOrder`, {
+          method: "POST",
+          headers: apiHeaders,
+          body: JSON.stringify({ buyOrderNo: orderNo })
+        });
+      }
+      await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({ orderType: orderType })
+      });
+    } catch (e) {}
+  }
+
+  // অটো-বাই ইঞ্জিন
   async function runAutoBuyEngine(targetAmount, orderType) {
     const baseUrl = "https://apiweb.payapiar.com";
     const bankCode = orderType === 1 ? "paytm" : "moneyView";
     const kycId = orderType === 1 ? "5844647" : "5265767";
 
-    let minAmt = targetAmount;
-    let maxAmt = targetAmount <= 1000 ? 2000 : targetAmount * 2;
+    const minAmt = targetAmount;
+    const maxAmt = targetAmount;
 
     while (isRunning) {
       try {
@@ -472,7 +590,9 @@
 
         const startData = await startRes.json();
 
-        if (startData?.code === "1083") {
+        if (startData?.code === "1214") {
+          await sleep(500);
+        } else if (startData?.code === "1083") {
           logStatus("Rate limited. Pausing 2s...");
           await sleep(2000);
           continue;
@@ -496,57 +616,39 @@
               continue;
             }
 
-            // যদি অর্ডার ম্যাচ হয়
             if (
               resData?.matchResult === "MATCHED" || 
               resData?.status === "COMPLETED" || 
-              resData?.pendingOrder ||
-              resData?.buyResult
+              resData?.buyResult || 
+              resData?.pendingOrder
             ) {
-              const matchedAmount = findStrictAmount(resData);
-              const orderObj = resData?.pendingOrder || resData?.buyResult || resData?.lastMatchResult || {};
-              const matchedOrder = orderObj?.platformOrder || resData?.platformOrder;
+              const matchedAmount = getActualMatchedAmount(resData);
+              const buyOrderNo = resData?.buyResult?.buyOrderNo || resData?.pendingOrder?.buyOrderNo;
+              const platformOrder = resData?.buyResult?.platformOrder || resData?.pendingOrder?.platformOrder;
 
-              // ১. যদি অ্যামাউন্ট টার্গেটের সাথে না মেলে (যেমন: ১৫০০ বা ১০৫৭)
-              if (matchedAmount !== null && matchedAmount !== targetAmount) {
+              // ফিল্টারিং: অন্য অ্যামাউন্ট হলে তৎক্ষণাৎ ক্যানসেল
+              if (matchedAmount && matchedAmount !== targetAmount) {
                 logStatus(`⚠️ Ignored ₹${matchedAmount} (Not ₹${targetAmount})`);
-
-                // তৎক্ষণাৎ ক্যানসেল কল পাঠিয়ে ভুল অর্ডারটি ছেড়ে দেওয়া
-                try {
-                  await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
-                    method: "POST",
-                    headers: apiHeaders,
-                    body: JSON.stringify({ orderType: orderType })
-                  });
-                } catch (e) {}
-
-                await sleep(500);
-                break; // লুপ ভেঙে পুনরায় শুধু targetAmount খোঁজা শুরু করবে
+                await forceCancelOrder(baseUrl, buyOrderNo, orderType);
+                await sleep(600);
+                break;
               }
 
-              // ২. যদি অ্যামাউন্ট একদম নিখুঁতভাবে targetAmount (যেমন: ১০০০) হয়
+              // সঠিক অ্যামাউন্ট হলে লক করে ক্যাশিয়ারে নেওয়া
               if (matchedAmount === targetAmount) {
                 logStatus(`🟢 LOCKED EXACT ₹${targetAmount}!`);
-                if (matchedOrder) {
-                  location.href = `${location.origin}/#/order/cashier?platformOrder=${matchedOrder}`;
+                const finalOrder = platformOrder || buyOrderNo;
+                if (finalOrder) {
+                  location.href = `${location.origin}/#/order/cashier?platformOrder=${finalOrder}`;
                 } else {
                   location.reload();
                 }
                 return;
               }
 
-              // ৩. যদি অ্যামাউন্ট কোনোভাবেই নিশ্চিত হওয়া না যায় (ভুল ঝুঁকি নেওয়া হবে না)
-              if (matchedAmount === null) {
-                logStatus("⚠️ Unknown Amount. Skipping...");
-                try {
-                  await fetch(`${baseUrl}/ar-wallet/smartRangeBuy/match/cancel`, {
-                    method: "POST",
-                    headers: apiHeaders,
-                    body: JSON.stringify({ orderType: orderType })
-                  });
-                } catch (e) {}
-                await sleep(500);
-                break;
+              if (!matchedAmount) {
+                logStatus("⚠️ Checking Amount...");
+                await sleep(300);
               }
             }
 
@@ -558,38 +660,4 @@
         }
 
         await sleep(350);
-      } catch (err) {
-        logStatus("Network Sync Error");
-        await sleep(600);
-      }
-    }
-  }
-
-  // বাটন কন্ট্রোল
-  startBtn.onclick = () => {
-    if (isRunning) return;
-    const amountVal = Number(amountInput.value);
-    if (!amountVal) {
-      logStatus("Enter amount");
-      return;
-    }
-
-    isRunning = true;
-    overlayEl.style.display = "flex";
-    logStatus("INITIALIZING...");
-
-    setTimeout(() => {
-      logStatus(`🟢 Target ₹${amountVal}`);
-      runAutoBuyEngine(amountVal, selectedOrderType);
-    }, 400);
-  };
-
-  stopBtn.onclick = () => {
-    isRunning = false;
-    overlayEl.style.display = "none";
-    logStatus("🔴 Stopped");
-  };
-
-  logStatus("Ready");
-})();
-      
+      } catch (
