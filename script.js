@@ -1,4 +1,10 @@
 (async function () {
+  // পূর্ববর্তী ইনস্ট্যান্স অপসারণ
+  const oldPanel = document.getElementById("cyberPanel");
+  if (oldPanel) oldPanel.remove();
+  const oldOverlay = document.getElementById("cyberOverlay");
+  if (oldOverlay) oldOverlay.remove();
+
   const v = document.createElement("style");
   v.innerHTML = `
     #cyberPanel {
@@ -9,7 +15,6 @@
         z-index: 999999;
         background: #f0ebe4;
         border-radius: 22px;
-        /* উন্নত ও দৃষ্টিনন্দন ফ্লোটিং স্যাডো (Floating Shadow) */
         box-shadow: 
             0 20px 45px rgba(0, 0, 0, 0.25),
             0 8px 16px rgba(0, 0, 0, 0.15),
@@ -22,7 +27,6 @@
         transition: box-shadow 0.3s ease, transform 0.3s ease;
     }
 
-    /* প্যানেলের ওপর কার্সার আনলে হালকা ড্রপ স্যাডো বাউন্স ইফেক্ট */
     #cyberPanel:hover {
         box-shadow: 
             0 25px 50px rgba(0, 0, 0, 0.3),
@@ -37,6 +41,7 @@
         align-items: center;
         gap: 8px;
         cursor: move;
+        touch-action: none;
     }
 
     .cyber-header-badge {
@@ -84,7 +89,6 @@
         letter-spacing: 0.5px;
     }
 
-    /* Toggle Buttons */
     .toggle-container {
         display: grid;
         grid-template-columns: 1.2fr 1fr;
@@ -112,7 +116,6 @@
             0 4px 10px rgba(80, 151, 150, 0.4);
     }
 
-    /* Input Field */
     .cyber-input {
         width: 100%;
         box-sizing: border-box;
@@ -134,7 +137,6 @@
         outline: none;
     }
 
-    /* Action Buttons */
     .cyber-buttons {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -179,7 +181,6 @@
         transform: translateY(-1px);
     }
 
-    /* Status Indicator */
     .cyber-status {
         margin-top: 2px;
         background: #ded7cd;
@@ -240,12 +241,13 @@
     document.body.appendChild(v2);
   }
   const v3 = document.getElementById("overlay-live-status");
+
   let v4 = document.getElementById("cyberPanel");
   if (!v4) {
     v4 = document.createElement("div");
     v4.id = "cyberPanel";
     v4.innerHTML = `
-        <div class="cyber-header">
+        <div class="cyber-header" id="cyberDragHeader">
             <div class="cyber-header-badge">⚡</div>
             <div class="cyber-header-title">
                 <span>⚡</span> AUTO BUY PANEL
@@ -282,6 +284,7 @@
         </div>`;
     document.body.appendChild(v4);
   }
+
   const v5 = document.getElementById("cyberStatus");
   const v6 = document.getElementById("startBtn");
   const v7 = document.getElementById("stopBtn");
@@ -416,6 +419,9 @@
   const v21 = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
   localStorage.setItem("arb_device_code", v21);
 
+  const localUserInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const dynMemberId = String(localUserInfo?.value?.memberId || localUserInfo?.value?.memberld || localUserInfo?.memberId || "22801760");
+
   const vO = {
     accept: "application/json, text/plain, */*",
     "content-type": "application/json",
@@ -423,13 +429,13 @@
     deviceId: "undefined",
     deviceType: "3",
     page: "Arb",
+    language: "1",
+    memberId: dynMemberId,
     deviceCode: v21
   };
 
   v6.onclick = () => {
-    if (v10) {
-      return;
-    }
+    if (v10) return;
     const vNumber2 = Number(v8.value);
     if (!vNumber2) {
       f("Enter amount");
@@ -451,38 +457,53 @@
     f("🔴 Stopped");
   };
 
+  // ড্র্যাগিং সাপোর্ট
   (function () {
-    const v22 = v4.querySelector(".cyber-header");
+    const v22 = document.getElementById("cyberDragHeader") || v4.querySelector(".cyber-header");
     let v23 = false;
     let vLN0 = 0;
     let vLN02 = 0;
 
-    v22.addEventListener("mousedown", p8 => {
+    function onDown(p8) {
       v23 = true;
-      vLN0 = p8.clientX - v4.offsetLeft;
-      vLN02 = p8.clientY - v4.offsetTop;
-    });
+      const clientX = p8.touches ? p8.touches[0].clientX : p8.clientX;
+      const clientY = p8.touches ? p8.touches[0].clientY : p8.clientY;
+      vLN0 = clientX - v4.offsetLeft;
+      vLN02 = clientY - v4.offsetTop;
+      v4.style.transition = "none";
+    }
 
-    document.addEventListener("mouseup", () => {
-      v23 = false;
-    });
-
-    document.addEventListener("mousemove", p9 => {
-      if (!v23) {
-        return;
-      }
-      v4.style.left = p9.clientX - vLN0 + "px";
-      v4.style.top = p9.clientY - vLN02 + "px";
+    function onMove(p9) {
+      if (!v23) return;
+      const clientX = p9.touches ? p9.touches[0].clientX : p9.clientX;
+      const clientY = p9.touches ? p9.touches[0].clientY : p9.clientY;
+      v4.style.left = Math.max(10, Math.min(window.innerWidth - 290, clientX - vLN0)) + "px";
+      v4.style.top = Math.max(10, Math.min(window.innerHeight - 340, clientY - vLN02)) + "px";
       v4.style.right = "auto";
       v4.style.bottom = "auto";
-    });
+    }
+
+    function onUp() {
+      v23 = false;
+      v4.style.transition = "box-shadow 0.3s ease";
+    }
+
+    v22.addEventListener("mousedown", onDown);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+
+    v22.addEventListener("touchstart", onDown, { passive: true });
+    document.addEventListener("touchmove", onMove, { passive: true });
+    document.addEventListener("touchend", onUp);
   })();
 
+  // আল্ট্রা-ফাস্ট অর্ডার এক্সিকিউটর (নতুন প্ল্যাটফর্ম লজিক সমন্বিত)
   async function f5(p10, p11) {
     while (v10) {
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
         f("Checking " + v24 + " orders for ₹" + p10 + "...");
+
         const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
@@ -491,67 +512,92 @@
             pageNo: 1
           })
         });
+
         const v26 = await v25.json();
         const v27 = v26?.data?.list || [];
+
         if (!v27.length) {
           f("No orders found...");
-          await f3(300);
+          await f3(80); // দ্রুততম নিরাপদ চেকিং
           continue;
         }
-        const v28 = v27.filter(p12 => Number(p12.amount) === p10);
+
+        // কঠোর ফিল্টারিং: স্ট্রিং বা ফ্লোট (যেমন: "1000.00") সঠিক পূর্ণসংখ্যায় মেলাবে
+        const v28 = v27.filter(p12 => Math.round(parseFloat(p12.amount)) === p10);
+
         if (!v28.length) {
           f("Waiting for order ₹" + p10);
-          await f3(300);
+          await f3(80);
           continue;
         }
+
         for (const v29 of v28) {
-          if (!v10) {
-            break;
-          }
+          if (!v10) break;
           f("Trying ₹" + v29.amount);
-          const vO2 = {
-            amount: v29.amount,
-            platformOrder: v29.platformOrder,
-            payType: v29.payType,
-            orderType: v29.orderType
-          };
+
+          const actualAmount = parseFloat(v29.amount);
+          const platformOrder = v29.platformOrder;
+          // লগে দেখা গেছে payType = "3" (OTP-UPI) অথবা "1" (Bank)
+          const actualPayType = String(v29.payType || (p11 === 1 ? "3" : "1"));
+          const actualOrderType = Number(v29.orderType || p11);
+
+          // বাউন্ড ব্যাংক কোড ও KYC ID (Paytm = 5844647, MoneyView = 5265767)
+          const bankCode = p11 === 1 ? "paytm" : "moneyView";
+          const kycId = p11 === 1 ? 5844647 : 5265767;
+
           try {
+            // ১. beforeBuy রিকোয়েস্ট (লগের হুবহু পেলোড)
             const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
               method: "POST",
               headers: vO,
-              body: JSON.stringify(vO2)
+              body: JSON.stringify({
+                amount: actualAmount,
+                platformOrder: platformOrder,
+                payType: actualPayType,
+                orderType: actualOrderType
+              })
             });
+
             const v31 = await v30.json();
             if (v31.code !== "1") {
+              // যদি অন্য কেউ নিয়ে নেয় (যেমন Code 1194) সাথে সাথে পরেরটায় যাবে
               continue;
             }
+
+            // ২. мгновенно চূড়ান্ত buy কল এক্সিকিউট
             const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
               method: "POST",
               headers: vO,
               body: JSON.stringify({
-                amount: v29.amount,
-                platformOrder: v29.platformOrder,
-                payType: v29.payType,
-                orderType: v29.orderType,
-                buyBankCode: "moneyView",
-                buyerKycId: ""
+                amount: actualAmount,
+                platformOrder: platformOrder,
+                payType: actualPayType,
+                orderType: actualOrderType,
+                buyBankCode: bankCode,
+                buyerKycId: kycId
               })
             });
+
             const v33 = await v32.json();
             if (v33.code === "1" || v33.msg === "Success") {
-              f("SUCCESS ₹" + v29.amount);
-              location.reload();
+              f("SUCCESS ₹" + actualAmount);
+              const targetOrder = v33?.data?.buyOrderNo || v33?.data?.platformOrder || platformOrder;
+              if (targetOrder) {
+                location.href = location.origin + "/#/order/cashier?platformOrder=" + targetOrder;
+              } else {
+                location.reload();
+              }
               return;
             }
           } catch (e2) {
             console.error(e2);
           }
         }
-        await f3(300);
+        await f3(80);
       } catch (e3) {
         console.error(e3);
         f("Error. Retrying...");
-        await f3(500);
+        await f3(300);
       }
     }
   }
@@ -561,22 +607,19 @@
       const v34 = JSON.parse(localStorage.getItem("userInfo"));
       const v35 = v34?.value?.memberId || v34?.value?.memberld;
       const v36 = v34?.balance ?? v34?.value?.balance;
-      if (!v35 || v36 === undefined || v36 === null) {
-        return;
-      }
+      if (!v35 || v36 === undefined || v36 === null) return;
+
       const v37 = firebase.firestore();
       const v38 = await v37.collection("members").where("walletUserId", "==", String(v35)).limit(1).get();
-      if (v38.empty) {
-        return;
-      }
+      if (v38.empty) return;
+
       const v39 = v38.docs[0];
       const v40 = v37.collection("members").doc(v39.id);
       const v41 = v39.data();
       const vNumber3 = Number(v41.balance ?? 0);
       const vNumber4 = Number(v36);
-      if (vNumber3 === vNumber4) {
-        return;
-      }
+      if (vNumber3 === vNumber4) return;
+
       const v42 = vNumber4 - vNumber3;
       await v37.collection("transactions").add({
         walletUserId: String(v35),
@@ -596,9 +639,7 @@
   }
 
   function f7() {
-    if (v16) {
-      return;
-    }
+    if (v16) return;
     f6();
     v16 = setInterval(f6, 15000);
   }
@@ -607,30 +648,16 @@
     try {
       const v43 = JSON.parse(localStorage.getItem("userInfo"));
       const v44 = v43?.value?.memberId || v43?.value?.memberld;
-      if (!v44) {
-        return {
-          allowed: false,
-          isPremium: false
-        };
-      }
+      if (!v44) return { allowed: false, isPremium: false };
+
       const v45 = await firebase.firestore().collection("members").where("walletUserId", "==", String(v44)).where("active", "==", true).limit(1).get();
-      if (v45.empty) {
-        return {
-          allowed: false,
-          isPremium: false
-        };
-      }
+      if (v45.empty) return { allowed: false, isPremium: false };
+
       const v46 = v45.docs[0].data();
-      return {
-        allowed: true,
-        isPremium: v46.is_premium === true
-      };
+      return { allowed: true, isPremium: v46.is_premium === true };
     } catch {
-      return {
-        allowed: false,
-        isPremium: false
-      };
+      return { allowed: false, isPremium: false };
     }
   }
 })();
-      
+                
