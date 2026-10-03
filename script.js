@@ -299,7 +299,6 @@
       v9.querySelector(".active").classList.remove("active");
       p.classList.add("active");
       vLN1 = Number(p.dataset.value);
-      console.log("Selected Order Type:", vLN1 === 1 ? "UPI" : "BANK");
     };
   });
 
@@ -307,7 +306,7 @@
     console.log(p2);
     if (v5) {
       v5.innerText = p2;
-      const v12 = /denied|not found|Error|Stopped|🔴/i.test(p2);
+      const v12 = /denied|not found|Error|Stopped|someone else|🔴/i.test(p2);
       const v13 = /SUCCESS|🟢/i.test(p2);
       if (v12) {
         v5.style.color = "#ba5d58";
@@ -322,7 +321,7 @@
     }
     if (v3) {
       v3.innerText = p2;
-      const v14 = /denied|not found|Error|Stopped|🔴/i.test(p2);
+      const v14 = /denied|not found|Error|Stopped|someone else|🔴/i.test(p2);
       v3.style.color = v14 ? "#ba5d58" : "#3d8573";
       v3.style.textShadow = v14 ? "0 0 10px rgba(186, 93, 88, 0.4)" : "0 0 10px rgba(61, 133, 115, 0.4)";
     }
@@ -497,14 +496,16 @@
     document.addEventListener("touchend", onUp);
   })();
 
-  // আল্ট্রা-ফাস্ট অর্ডার এক্সিকিউটর (নতুন প্ল্যাটফর্ম লজিক সমন্বিত)
+  // জিরো-ল্যাগ আল্ট্রা ফাস্ট এক্সিকিউটর
   async function f5(p10, p11) {
+    const baseUrl = "https://apiweb.apiarbpay.com";
+
     while (v10) {
       try {
         const v24 = p11 === 1 ? "UPI" : "BANK";
         f("Checking " + v24 + " orders for ₹" + p10 + "...");
 
-        const v25 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buyList", {
+        const v25 = await fetch(baseUrl + "/ar-wallet/buyCenter/buyList", {
           method: "POST",
           headers: vO,
           body: JSON.stringify({
@@ -518,86 +519,91 @@
 
         if (!v27.length) {
           f("No orders found...");
-          await f3(80); // দ্রুততম নিরাপদ চেকিং
+          await f3(40); // কোনো অযথা ডিলে নেই
           continue;
         }
 
-        // কঠোর ফিল্টারিং: স্ট্রিং বা ফ্লোট (যেমন: "1000.00") সঠিক পূর্ণসংখ্যায় মেলাবে
-        const v28 = v27.filter(p12 => Math.round(parseFloat(p12.amount)) === p10);
-
-        if (!v28.length) {
-          f("Waiting for order ₹" + p10);
-          await f3(80);
-          continue;
-        }
-
-        for (const v29 of v28) {
-          if (!v10) break;
-          f("Trying ₹" + v29.amount);
-
-          const actualAmount = parseFloat(v29.amount);
-          const platformOrder = v29.platformOrder;
-          // লগে দেখা গেছে payType = "3" (OTP-UPI) অথবা "1" (Bank)
-          const actualPayType = String(v29.payType || (p11 === 1 ? "3" : "1"));
-          const actualOrderType = Number(v29.orderType || p11);
-
-          // বাউন্ড ব্যাংক কোড ও KYC ID (Paytm = 5844647, MoneyView = 5265767)
-          const bankCode = p11 === 1 ? "paytm" : "moneyView";
-          const kycId = p11 === 1 ? 5844647 : 5265767;
-
-          try {
-            // ১. beforeBuy রিকোয়েস্ট (লগের হুবহু পেলোড)
-            const v30 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/beforeBuy", {
-              method: "POST",
-              headers: vO,
-              body: JSON.stringify({
-                amount: actualAmount,
-                platformOrder: platformOrder,
-                payType: actualPayType,
-                orderType: actualOrderType
-              })
-            });
-
-            const v31 = await v30.json();
-            if (v31.code !== "1") {
-              // যদি অন্য কেউ নিয়ে নেয় (যেমন Code 1194) সাথে সাথে পরেরটায় যাবে
-              continue;
-            }
-
-            // ২. мгновенно চূড়ান্ত buy কল এক্সিকিউট
-            const v32 = await fetch("https://apiweb.apiarbpay.com/ar-wallet/buyCenter/buy", {
-              method: "POST",
-              headers: vO,
-              body: JSON.stringify({
-                amount: actualAmount,
-                platformOrder: platformOrder,
-                payType: actualPayType,
-                orderType: actualOrderType,
-                buyBankCode: bankCode,
-                buyerKycId: kycId
-              })
-            });
-
-            const v33 = await v32.json();
-            if (v33.code === "1" || v33.msg === "Success") {
-              f("SUCCESS ₹" + actualAmount);
-              const targetOrder = v33?.data?.buyOrderNo || v33?.data?.platformOrder || platformOrder;
-              if (targetOrder) {
-                location.href = location.origin + "/#/order/cashier?platformOrder=" + targetOrder;
-              } else {
-                location.reload();
-              }
-              return;
-            }
-          } catch (e2) {
-            console.error(e2);
+        // সরাসরি প্রথম মিল পাওয়া অর্ডারে তৎক্ষণাৎ স্ট্রাইক
+        let targetOrder = null;
+        for (let i = 0; i < v27.length; i++) {
+          if (Math.round(parseFloat(v27[i].amount)) === p10) {
+            targetOrder = v27[i];
+            break; // প্রথমটি পেলেই আর বাকি লিস্ট চেক না করে সাথে সাথে পাঠানো
           }
         }
-        await f3(80);
+
+        if (!targetOrder) {
+          f("Waiting for order ₹" + p10);
+          await f3(40);
+          continue;
+        }
+
+        if (!v10) break;
+        f("⚡ Sniping ₹" + targetOrder.amount);
+
+        const actualAmount = parseFloat(targetOrder.amount);
+        const platformOrder = targetOrder.platformOrder;
+        const actualPayType = String(targetOrder.payType || (p11 === 1 ? "3" : "1"));
+        const actualOrderType = Number(targetOrder.orderType || p11);
+
+        const bankCode = p11 === 1 ? "paytm" : "moneyView";
+        const kycId = p11 === 1 ? 5844647 : 5265767;
+
+        try {
+          // ১. beforeBuy দ্রুততম এক্সিকিউশন
+          const v30 = await fetch(baseUrl + "/ar-wallet/buyCenter/beforeBuy", {
+            method: "POST",
+            headers: vO,
+            body: JSON.stringify({
+              amount: actualAmount,
+              platformOrder: platformOrder,
+              payType: actualPayType,
+              orderType: actualOrderType
+            })
+          });
+
+          const v31 = await v30.json();
+          if (v31.code !== "1") {
+            if (v31.code === "1194") {
+              f("⚠️ Taken by someone else. Instant retry!");
+            }
+            continue; // অন্য কেউ নিয়ে নিলে মুহূর্তের মধ্যে আবার নতুন রিকোয়েস্টে চলে যাবে
+          }
+
+          // ২. সাথে সাথে চূড়ান্ত buy কল
+          const v32 = await fetch(baseUrl + "/ar-wallet/buyCenter/buy", {
+            method: "POST",
+            headers: vO,
+            body: JSON.stringify({
+              amount: actualAmount,
+              platformOrder: platformOrder,
+              payType: actualPayType,
+              orderType: actualOrderType,
+              buyBankCode: bankCode,
+              buyerKycId: kycId
+            })
+          });
+
+          const v33 = await v32.json();
+          if (v33.code === "1" || v33.msg === "Success") {
+            f("🟢 SUCCESS ₹" + actualAmount);
+            const finalOrder = v33?.data?.buyOrderNo || v33?.data?.platformOrder || platformOrder;
+            if (finalOrder) {
+              location.href = location.origin + "/#/order/cashier?platformOrder=" + finalOrder;
+            } else {
+              location.reload();
+            }
+            return;
+          }
+        } catch (e2) {
+          console.error(e2);
+        }
+
+        await f3(40);
       } catch (e3) {
         console.error(e3);
         f("Error. Retrying...");
-        await f3(300);
+        await f3(200);
       }
     }
   }
@@ -660,4 +666,4 @@
     }
   }
 })();
-                
+    
