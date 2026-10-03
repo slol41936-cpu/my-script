@@ -2,8 +2,9 @@
   // ===== সেটিংস =====
   const API = "https://apiweb.apiarbpay.com/ar-wallet/";
   const BANK_CODE = "moneyView";   // যে বাউন্ড ব্যাংক দিয়ে কিনবেন (bankCode)
-  const LOOP_DELAY = 250;          // ms, প্রতিটি match/start এর মাঝে বিরতি (১৫০ এর নিচে নামাবেন না)
-  const ERROR_DELAY = 800;         // ms, error হলে অপেক্ষা
+  const START_DELAY = 1300;        // ms, শুরুর বিরতি (সার্ভারের 1083 দেখে নিজে ঠিক করে নেবে)
+  const MIN_DELAY = 900;           // ms, এর চেয়ে দ্রুত কখনো যাবে না
+  const MAX_DELAY = 4000;          // ms, সার্ভার বেশি আটকালে সর্বোচ্চ এতটা ধীর হবে
   const MAX_ERRORS = 8;            // পরপর এতবার error হলে নিজে থেমে যাবে
   const AUTO_RELOAD = true;        // ম্যাচ হলে পেজ রিলোড করে পেমেন্ট পেজে নিয়ে যাবে
 
@@ -201,7 +202,13 @@
         balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     } catch (e) {
-      console.error("Balance sync error:", e);
+      if (e && e.code === "permission-denied") {
+        clearInterval(balanceTimer);
+        balanceTimer = null;
+        console.log("Balance sync off (Firestore rules block client writes)");
+      } else {
+        console.error("Balance sync error:", e);
+      }
     }
   }
 
@@ -313,8 +320,10 @@
   // সার্ভার অর্ডার ম্যাচ করলে true
   function isMatched(d) {
     if (!d) return false;
+    const info = d.matchInfo || {};
     if (d.matchResult && d.matchResult !== "NOT_MATCHED") return true;
     if (d.buyResult || d.pendingOrder) return true;
+    if (Number(info.countDown) > 0 || Number(info.payTime) > 0) return true;
     return false;
   }
 
@@ -322,7 +331,10 @@
   async function mainLoop(min, max, type, kycId) {
     let tries = 0;
     let errors = 0;
+    let okStreak = 0;
+    let delay = START_DELAY;
     while (running) {
+      let wait = delay;
       try {
         const r = await post("smartRangeBuy/match/start", {
           maxAmount: max,
@@ -333,8 +345,15 @@
         });
         tries++;
 
-        if (r.code !== "1") {
+        if (r.code === "1083") {
+          // "Frequent operation" = সার্ভারের রেট লিমিট, আসল error নয়। ধীর হই।
+          okStreak = 0;
+          delay = Math.min(delay + 400, MAX_DELAY);
+          wait = delay;
+          setStatus("Slowing down | wait " + (wait / 1000).toFixed(1) + "s | #" + tries);
+        } else if (r.code !== "1") {
           errors++;
+          wait = 1000;
           setStatus("Error " + r.code + ": " + (r.msg || ""));
           if (errors >= MAX_ERRORS) {
             running = false;
@@ -342,31 +361,33 @@
             setStatus("Error: too many failures, stopped");
             return;
           }
-          await sleep(ERROR_DELAY);
-          continue;
-        }
-        errors = 0;
-
-        const d = r.data || {};
-        if (isMatched(d)) {
-          running = false;
-          console.log("MATCH RESPONSE:", JSON.stringify(r));
-          const order = findOrder(d, 0);
-          alarm();
-          setStatus("🟢 MATCHED " + (order || "") + " | result: " + d.matchResult);
-          overlay.style.display = "none";
-          if (AUTO_RELOAD) {
-            await sleep(1000);
-            location.reload();
+        } else {
+          errors = 0;
+          okStreak++;
+          if (okStreak >= 5 && delay > MIN_DELAY) {
+            delay = Math.max(delay - 100, MIN_DELAY);
+            okStreak = 0;
           }
-          return;
+          const d = r.data || {};
+          if (isMatched(d)) {
+            running = false;
+            console.log("MATCH RESPONSE:", JSON.stringify(r));
+            const order = findOrder(d, 0);
+            alarm();
+            setStatus("🟢 MATCHED " + (order || "") + " | result: " + d.matchResult);
+            overlay.style.display = "none";
+            if (AUTO_RELOAD) {
+              await sleep(1000);
+              location.reload();
+            }
+            return;
+          }
+          setStatus("Searching ₹" + min + "-" + max + " | #" + tries + " " + (d.matchInfo?.status || ""));
         }
-
-        setStatus("Searching ₹" + min + "-" + max + " | #" + tries + " " + (d.matchInfo?.status || ""));
-        await sleep(LOOP_DELAY);
       } catch (e) {
         console.error(e);
         errors++;
+        wait = 1000;
         setStatus("Error. Retrying...");
         if (errors >= MAX_ERRORS) {
           running = false;
@@ -374,8 +395,8 @@
           setStatus("Error: network failures, stopped");
           return;
         }
-        await sleep(ERROR_DELAY);
       }
+      await sleep(wait);
     }
   }
 
