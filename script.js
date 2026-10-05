@@ -5,7 +5,7 @@
   const prevCSS = document.getElementById("cyberMatchCSS");
   if (prevCSS) prevCSS.remove();
 
-  // ১. ছোট ও নিখুঁত সাইবারপাঙ্ক সিএসএস
+  // ১. অফ-হোয়াইট ও প্রফেশনাল লাইট থিম সিএসএস
   const style = document.createElement("style");
   style.id = "cyberMatchCSS";
   style.innerHTML = `
@@ -15,34 +15,37 @@
       bottom: 12px;
       width: 195px;
       z-index: 9999999;
-      background: linear-gradient(180deg, #181b24 0%, #0d0f15 100%);
-      border-radius: 10px;
-      border: 1px solid #363c4e;
-      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2), 0 8px 20px rgba(0, 0, 0, 0.7);
+      background: linear-gradient(180deg, #fdfdfd 0%, #f4f5f8 100%);
+      border-radius: 12px;
+      border: 1px solid #dcdfe6;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
       box-sizing: border-box;
     }
     .cmp-header {
-      padding: 6px 8px;
+      padding: 6px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid #eaedf1;
       cursor: move;
       touch-action: none;
-      background: rgba(255, 255, 255, 0.02);
+      background: #fafbfc;
     }
     .cmp-title {
-      font-size: 9px;
+      font-size: 9.5px;
       font-weight: 800;
       letter-spacing: 0.6px;
-      color: #00f2fe;
+      color: #1f2937;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
     .cmp-body {
-      padding: 8px;
+      padding: 8px 10px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -50,41 +53,49 @@
     .cmp-btn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 5px;
+      gap: 6px;
     }
     .cmp-btn {
-      height: 26px;
-      border-radius: 5px;
+      height: 28px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 700;
       border: 1px solid transparent;
       text-transform: uppercase;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.15s ease;
     }
     .cmp-btn-start {
-      background: #1b4b3e;
-      color: #38ef7d;
-      border-color: #38ef7d;
+      background: #e8f8f0;
+      color: #0f8b44;
+      border-color: #b7ebd0;
+    }
+    .cmp-btn-start:hover {
+      background: #d4f3e3;
     }
     .cmp-btn-stop {
-      background: #501d24;
-      color: #ff4e50;
-      border-color: #ff4e50;
+      background: #fdeeee;
+      color: #d93025;
+      border-color: #fad2d2;
+    }
+    .cmp-btn-stop:hover {
+      background: #fbdada;
     }
     .cmp-status-box {
-      border: 1px solid rgba(0, 242, 254, 0.25);
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 5px;
+      border: 1px solid #e2e6ea;
+      background: #ffffff;
+      border-radius: 6px;
       padding: 4px;
       text-align: center;
       font-size: 9px;
       font-weight: 700;
-      color: #4facfe;
+      color: #2563eb;
       text-transform: uppercase;
       letter-spacing: 0.3px;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
     }
   `;
   document.head.appendChild(style);
@@ -95,7 +106,7 @@
   panel.innerHTML = `
     <div class="cmp-header" id="cmpHeader">
       <div class="cmp-title">⚡ AUTO MATCH</div>
-      <div style="font-size: 10px; color: #777; cursor: pointer;" id="cmpClose">✕</div>
+      <div style="font-size: 11px; color: #9ca3af; cursor: pointer; font-weight: bold;" id="cmpClose">✕</div>
     </div>
     <div class="cmp-body">
       <div class="cmp-btn-row">
@@ -116,14 +127,14 @@
   let monitorInterval = null;
   let isClickCoolingDown = false;
 
-  function setStatus(text, color = "#4facfe") {
+  function setStatus(text, color = "#2563eb") {
     if (!statusEl) return;
     statusEl.innerText = "Status: " + text;
     statusEl.style.color = color;
     statusEl.style.borderColor = color;
   }
 
-  // ৩. অডিও অ্যালার্ট ফাংশন
+  // ৩. অডিও অ্যালার্ট ইঞ্জিন
   const audioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
   const customAudio = new Audio(audioUrl);
 
@@ -157,13 +168,13 @@
             gain.connect(ctx.destination);
             osc.start();
             osc.stop(ctx.currentTime + 0.2);
-          } catch(err) {}
+          } catch (err) {}
         }, i * 250);
       }
     } catch (e) {}
   }
 
-  // ৪. স্বাভাবিক মাউস ক্লিক সিমুলেশন
+  // ৪. ক্লিন মাউস ক্লিক
   function performClick(element) {
     if (!element) return;
     try {
@@ -190,7 +201,7 @@
       const pageText = document.body ? document.body.innerText : "";
       const currentUrl = window.location.href;
 
-      // অর্ডার পাওয়ার মার্কার চেক
+      // অর্ডার পাওয়ার নিশ্চিত মার্কার চেক
       const isOrderConfirmed = 
         pageText.includes("Matched, pending payment") || 
         pageText.includes("pending payment") ||
@@ -200,13 +211,12 @@
         pageText.includes("Pay ₹") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার পাওয়া মাত্র সাথে সাথে স্টপ, মিউজিক প্লে এবং UI স্ক্রিন থেকে সম্পূর্ণ রিমুভ
+      // অর্ডার পাওয়া মাত্র স্ক্রিপ্ট স্টপ, সাউন্ড প্লে এবং UI তাত্ক্ষণিক রিমুভ
       if (isOrderConfirmed && !pageText.includes("Searching available orders") && !pageText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
         triggerAlarm();
         
-        // ইউআই সাথে সাথে মুছে ফেলা
         const currentPanel = document.getElementById("cyberMatchPanel");
         if (currentPanel) {
           currentPanel.remove();
@@ -228,18 +238,18 @@
 
         if (matchButton) {
           isClickCoolingDown = true;
-          setStatus("Waiting 1.2s...", "#ffbb00");
+          setStatus("Waiting 1.2s...", "#d97706");
 
           // ১.২ সেকেন্ড স্বাভাবিক বিরতি দিয়ে ক্লিক
           setTimeout(() => {
             if (!isRunning) return;
-            setStatus("Retrying...", "#38ef7d");
+            setStatus("Retrying...", "#0f8b44");
             performClick(matchButton);
 
-            // ৩.৫ সেকেন্ড কুলডাউন লক যাতে "Frequent operation" না আসে
+            // ৩.৫ সেকেন্ড কুলডাউন লক
             setTimeout(() => {
               isClickCoolingDown = false;
-              if (isRunning) setStatus("Scanning...", "#00f2fe");
+              if (isRunning) setStatus("Scanning...", "#2563eb");
             }, 3500);
           }, 1200);
           return;
@@ -247,12 +257,12 @@
       }
 
       if (pageText.includes("Searching available orders") || pageText.includes("Matching")) {
-        setStatus("Searching...", "#00f2fe");
+        setStatus("Searching...", "#2563eb");
       }
     }, 300);
   }
 
-  // বাটন অ্যাকশন
+  // বাটন ইভেন্ট
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
@@ -260,7 +270,7 @@
     try {
       customAudio.load();
     } catch (e) {}
-    setStatus("Scanning...", "#00f2fe");
+    setStatus("Scanning...", "#2563eb");
     startMonitoring();
   };
 
@@ -268,7 +278,7 @@
     isRunning = false;
     isClickCoolingDown = false;
     if (monitorInterval) clearInterval(monitorInterval);
-    setStatus("Stopped", "#ff4e50");
+    setStatus("Stopped", "#d93025");
   };
 
   closeBtn.onclick = () => {
@@ -277,7 +287,7 @@
     panel.remove();
   };
 
-  // ড্র্যাগ ফিচার
+  // ড্র্যাগিং সাপোর্ট
   (function initDrag() {
     const header = document.getElementById("cmpHeader");
     let isDragging = false;
@@ -309,4 +319,4 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
-      
+                          
