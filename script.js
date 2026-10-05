@@ -1,5 +1,5 @@
 (async function () {
-  // পূর্ববর্তী প্যানেল ও স্টাইল ক্লিনআপ
+  // পূর্বের প্যানেল ও স্টাইল ক্লিনআপ
   const prevPanel = document.getElementById("cyberMatchPanel");
   if (prevPanel) prevPanel.remove();
   const prevCSS = document.getElementById("cyberMatchCSS");
@@ -95,11 +95,12 @@
       text-transform: uppercase;
       letter-spacing: 0.3px;
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+      cursor: pointer;
     }
   `;
   document.head.appendChild(style);
 
-  // ২. প্যানেল এইচটিএমএল (পেস্ট করলেই দৃশ্যমান হবে)
+  // ২. প্যানেল এইচটিএমএল
   const panel = document.createElement("div");
   panel.id = "cyberMatchPanel";
   panel.innerHTML = `
@@ -112,7 +113,7 @@
         <button class="cmp-btn cmp-btn-start" id="cmpStart" disabled>Start</button>
         <button class="cmp-btn cmp-btn-stop" id="cmpStop" disabled>Stop</button>
       </div>
-      <div class="cmp-status-box" id="cmpStatus">Checking License...</div>
+      <div class="cmp-status-box" id="cmpStatus">Checking ID...</div>
     </div>
   `;
   document.body.appendChild(panel);
@@ -134,8 +135,8 @@
     statusEl.style.borderColor = color;
   }
 
-  // ৩. ফায়ারবেস ব্যাকগ্রাউন্ড অথ চেকিং
-  (async function verifyFirebaseAccess() {
+  // ৩. ফায়ারবেস SDK এবং AR Wallet ID ভ্যালিডেশন
+  async function checkUserAccess() {
     try {
       if (!window.firebase) {
         await new Promise((resolve) => {
@@ -165,7 +166,26 @@
       }
 
       const db = firebase.firestore();
-      const doc = await db.collection("access").doc("status").get();
+
+      // ইউজারের কাছে সংরক্ষিত আইডি আছে কি না দেখা, না থাকলে ইনপুট প্রম্পট চাওয়া
+      let memberId = localStorage.getItem("ar_wallet_member_id");
+      if (!memberId) {
+        memberId = prompt("Enter your AR Wallet ID:");
+        if (memberId) {
+          memberId = memberId.trim();
+          localStorage.setItem("ar_wallet_member_id", memberId);
+        }
+      }
+
+      if (!memberId) {
+        setStatus("ID Required", "#d93025");
+        return;
+      }
+
+      setStatus("Verifying ID...", "#d97706");
+
+      // Firebase-এর 'members' কালেকশন থেকে নির্দিষ্ট ID চেক করা
+      const doc = await db.collection("members").doc(memberId).get();
 
       if (doc.exists && doc.data().status === "active") {
         isAuthorized = true;
@@ -173,12 +193,25 @@
         stopBtn.disabled = false;
         setStatus("Ready", "#0f8b44");
       } else {
+        isAuthorized = false;
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
         setStatus("Access Denied", "#d93025");
       }
     } catch (err) {
       setStatus("Access Denied", "#d93025");
     }
-  })();
+  }
+
+  // স্ট্যাটাস বক্সে ক্লিক করলে আইডি পরিবর্তনের সুযোগ
+  statusEl.onclick = () => {
+    if (!isRunning) {
+      localStorage.removeItem("ar_wallet_member_id");
+      checkUserAccess();
+    }
+  };
+
+  await checkUserAccess();
 
   // ৪. অডিও অ্যালার্ট ইঞ্জিন
   const audioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
@@ -231,7 +264,7 @@
     } catch (e) {}
   }
 
-  // ৬. স্ক্যানিং লজিক
+  // ৬. স্ক্যানিং ইঞ্জিন
   function startMonitoring() {
     if (monitorInterval) clearInterval(monitorInterval);
 
@@ -241,7 +274,7 @@
       const pageText = document.body ? document.body.innerText : "";
       const currentUrl = window.location.href;
 
-      // অর্ডার পাওয়ার মার্কার চেক
+      // অর্ডার পাওয়ার নিশ্চিত মার্কার চেক
       const isOrderConfirmed = 
         pageText.includes("Matched, pending payment") || 
         pageText.includes("pending payment") ||
@@ -251,7 +284,7 @@
         pageText.includes("Pay ₹") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার পেলে অ্যালার্ম এবং UI স্বয়ংক্রিয় রিমুভ
+      // অর্ডার পাওয়া মাত্র স্ক্রিপ্ট স্টপ, সাউন্ড প্লে এবং UI রিমুভ
       if (isOrderConfirmed && !pageText.includes("Searching available orders") && !pageText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
@@ -278,6 +311,7 @@
           isActionLocked = true;
           setStatus("Waiting 2s...", "#d97706");
 
+          // ২ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
           setTimeout(() => {
             if (!isRunning) return;
             setStatus("Retrying...", "#0f8b44");
@@ -298,7 +332,7 @@
     }, 400);
   }
 
-  // বাটন ইভেন্ট
+  // বাটন অ্যাকশন
   startBtn.onclick = () => {
     if (!isAuthorized) {
       setStatus("Access Denied", "#d93025");
@@ -359,4 +393,4 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
- 
+          
