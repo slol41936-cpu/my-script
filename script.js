@@ -1,11 +1,11 @@
-(async function () {
-  // পূর্বের প্যানেল ও স্টাইল ক্লিনআপ
+(function () {
+  // পূর্ববর্তী প্যানেল ও স্টাইল ক্লিনআপ
   const prevPanel = document.getElementById("cyberMatchPanel");
   if (prevPanel) prevPanel.remove();
   const prevCSS = document.getElementById("cyberMatchCSS");
   if (prevCSS) prevCSS.remove();
 
-  // ১. অফ-হোয়াইট থিম সিএসএস
+  // ১. অফ-হোয়াইট লাইট থিম সিএসএস
   const style = document.createElement("style");
   style.id = "cyberMatchCSS";
   style.innerHTML = `
@@ -68,20 +68,21 @@
       justify-content: center;
       transition: all 0.15s ease;
     }
-    .cmp-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      filter: grayscale(1);
-    }
     .cmp-btn-start {
       background: #e8f8f0;
       color: #0f8b44;
       border-color: #b7ebd0;
     }
+    .cmp-btn-start:hover {
+      background: #d4f3e3;
+    }
     .cmp-btn-stop {
       background: #fdeeee;
       color: #d93025;
       border-color: #fad2d2;
+    }
+    .cmp-btn-stop:hover {
+      background: #fbdada;
     }
     .cmp-status-box {
       border: 1px solid #e2e6ea;
@@ -91,11 +92,10 @@
       text-align: center;
       font-size: 9px;
       font-weight: 700;
-      color: #d97706;
+      color: #2563eb;
       text-transform: uppercase;
       letter-spacing: 0.3px;
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-      cursor: pointer;
     }
   `;
   document.head.appendChild(style);
@@ -110,10 +110,10 @@
     </div>
     <div class="cmp-body">
       <div class="cmp-btn-row">
-        <button class="cmp-btn cmp-btn-start" id="cmpStart" disabled>Start</button>
-        <button class="cmp-btn cmp-btn-stop" id="cmpStop" disabled>Stop</button>
+        <button class="cmp-btn cmp-btn-start" id="cmpStart">Start</button>
+        <button class="cmp-btn cmp-btn-stop" id="cmpStop">Stop</button>
       </div>
-      <div class="cmp-status-box" id="cmpStatus">Checking ID...</div>
+      <div class="cmp-status-box" id="cmpStatus">Status: Ready</div>
     </div>
   `;
   document.body.appendChild(panel);
@@ -126,7 +126,6 @@
   let isRunning = false;
   let monitorInterval = null;
   let isActionLocked = false;
-  let isAuthorized = false;
 
   function setStatus(text, color = "#2563eb") {
     if (!statusEl) return;
@@ -135,85 +134,7 @@
     statusEl.style.borderColor = color;
   }
 
-  // ৩. ফায়ারবেস SDK এবং AR Wallet ID ভ্যালিডেশন
-  async function checkUserAccess() {
-    try {
-      if (!window.firebase) {
-        await new Promise((resolve) => {
-          const s1 = document.createElement("script");
-          s1.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js";
-          s1.onload = () => {
-            const s2 = document.createElement("script");
-            s2.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js";
-            s2.onload = resolve;
-            document.head.appendChild(s2);
-          };
-          document.head.appendChild(s1);
-        });
-      }
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-        authDomain: "my-ar-automation.firebaseapp.com",
-        projectId: "my-ar-automation",
-        storageBucket: "my-ar-automation.firebasestorage.app",
-        messagingSenderId: "443374813761",
-        appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
-      };
-
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-
-      const db = firebase.firestore();
-
-      // ইউজারের কাছে সংরক্ষিত আইডি আছে কি না দেখা, না থাকলে ইনপুট প্রম্পট চাওয়া
-      let memberId = localStorage.getItem("ar_wallet_member_id");
-      if (!memberId) {
-        memberId = prompt("Enter your AR Wallet ID:");
-        if (memberId) {
-          memberId = memberId.trim();
-          localStorage.setItem("ar_wallet_member_id", memberId);
-        }
-      }
-
-      if (!memberId) {
-        setStatus("ID Required", "#d93025");
-        return;
-      }
-
-      setStatus("Verifying ID...", "#d97706");
-
-      // Firebase-এর 'members' কালেকশন থেকে নির্দিষ্ট ID চেক করা
-      const doc = await db.collection("members").doc(memberId).get();
-
-      if (doc.exists && doc.data().status === "active") {
-        isAuthorized = true;
-        startBtn.disabled = false;
-        stopBtn.disabled = false;
-        setStatus("Ready", "#0f8b44");
-      } else {
-        isAuthorized = false;
-        startBtn.disabled = true;
-        stopBtn.disabled = true;
-        setStatus("Access Denied", "#d93025");
-      }
-    } catch (err) {
-      setStatus("Access Denied", "#d93025");
-    }
-  }
-
-  // স্ট্যাটাস বক্সে ক্লিক করলে আইডি পরিবর্তনের সুযোগ
-  statusEl.onclick = () => {
-    if (!isRunning) {
-      localStorage.removeItem("ar_wallet_member_id");
-      checkUserAccess();
-    }
-  };
-
-  await checkUserAccess();
-
-  // ৪. অডিও অ্যালার্ট ইঞ্জিন
+  // ৩. অডিও অ্যালার্ট ইঞ্জিন
   const audioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
   const customAudio = new Audio(audioUrl);
 
@@ -251,7 +172,7 @@
     } catch (e) {}
   }
 
-  // ৫. সিঙ্গেল ক্লিন ক্লিক
+  // ৪. খাঁটি সিঙ্গেল ক্লিক (ডাবল রিকোয়েস্ট প্রতিরোধক)
   function singleHumanClick(target) {
     if (!target) return;
     try {
@@ -264,17 +185,17 @@
     } catch (e) {}
   }
 
-  // ৬. স্ক্যানিং ইঞ্জিন
+  // ৫. স্ক্যানিং ইঞ্জিন
   function startMonitoring() {
     if (monitorInterval) clearInterval(monitorInterval);
 
     monitorInterval = setInterval(() => {
-      if (!isRunning || !isAuthorized) return;
+      if (!isRunning) return;
 
       const pageText = document.body ? document.body.innerText : "";
       const currentUrl = window.location.href;
 
-      // অর্ডার পাওয়ার নিশ্চিত মার্কার চেক
+      // ক. অর্ডার ধরার সমস্ত নিশ্চিত মার্কার চেক
       const isOrderConfirmed = 
         pageText.includes("Matched, pending payment") || 
         pageText.includes("pending payment") ||
@@ -284,7 +205,7 @@
         pageText.includes("Pay ₹") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার পাওয়া মাত্র স্ক্রিপ্ট স্টপ, সাউন্ড প্লে এবং UI রিমুভ
+      // অর্ডার পাওয়া মাত্র সাথে সাথে স্টপ, সাউন্ড প্লে এবং UI রিমুভ
       if (isOrderConfirmed && !pageText.includes("Searching available orders") && !pageText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
@@ -295,9 +216,10 @@
         return;
       }
 
+      // যদি অলরেডি অ্যাকশন প্রসেসিং বা বিরতিতে থাকে তবে অপেক্ষা করবে
       if (isActionLocked) return;
 
-      // 'No match found' পেজ চেক
+      // খ. 'No match found' পেজ সম্পূর্ণ এসেছে কি না
       const isNoMatchPage = pageText.includes("No match found") || pageText.includes("after multiple attempts");
 
       if (isNoMatchPage) {
@@ -311,12 +233,13 @@
           isActionLocked = true;
           setStatus("Waiting 2s...", "#d97706");
 
-          // ২ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
+          // সার্ভার শান্ত হওয়ার জন্য পুরো ২ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
           setTimeout(() => {
             if (!isRunning) return;
             setStatus("Retrying...", "#0f8b44");
             singleHumanClick(matchButton);
 
+            // নতুন স্ক্যানিং শুরু না হওয়া পর্যন্ত ৪ সেকেন্ড ক্লিক লক থাকবে
             setTimeout(() => {
               isActionLocked = false;
               if (isRunning) setStatus("Scanning...", "#2563eb");
@@ -326,18 +249,15 @@
         }
       }
 
+      // স্বাভাবিক সার্চিং স্ট্যাটাস
       if (pageText.includes("Searching available orders") || pageText.includes("Matching")) {
         setStatus("Searching...", "#2563eb");
       }
     }, 400);
   }
 
-  // বাটন অ্যাকশন
+  // বাটন ইভেন্ট
   startBtn.onclick = () => {
-    if (!isAuthorized) {
-      setStatus("Access Denied", "#d93025");
-      return;
-    }
     if (isRunning) return;
     isRunning = true;
     isActionLocked = false;
@@ -393,4 +313,3 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
-          
