@@ -115,7 +115,7 @@
 
   let isRunning = false;
   let monitorInterval = null;
-  let isCooldown = false; // অতিরিক্ত ক্লিক থামানোর জন্য কুলডাউন লক
+  let isActionPending = false; // অতিরিক্ত ক্লিক পুরোপুরি ঠেকানোর লক
 
   function setStatus(text, color = "#4facfe") {
     if (!statusEl) return;
@@ -124,6 +124,7 @@
     statusEl.style.borderColor = color;
   }
 
+  // আপনার কাস্টম অডিও লিংক
   const directAudioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
   const customAudio = new Audio(directAudioUrl);
 
@@ -158,8 +159,8 @@
     }
   }
 
-  // নিরাপদ সিঙ্গেল ক্লিক ফাংশন
-  function safeClick(target) {
+  // স্মুথ এবং স্বাভাবিক ক্লিক ফাংশন
+  function triggerSmoothClick(target) {
     if (!target) return;
     try {
       const rect = target.getBoundingClientRect();
@@ -185,7 +186,7 @@
       const currentUrl = window.location.href;
       const bodyText = document.body ? document.body.innerText : "";
 
-      // অর্ডার পাওয়ার নিশ্চিত চেক
+      // ১. অর্ডার পাওয়া মাত্র সাথে সাথে স্টপ, গান প্লে এবং UI রিমুভ
       const hasOrderMatched = 
         bodyText.includes("Matched, pending payment") || 
         bodyText.includes("We have matched the best order") ||
@@ -195,7 +196,6 @@
         bodyText.includes("Time left to pay") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার ধরে ফেললে তাত্ক্ষণিক স্টপ, অ্যালার্ম এবং UI স্বয়ংক্রিয় রিমুভ
       if (hasOrderMatched && !bodyText.includes("Searching available orders") && !bodyText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
@@ -208,36 +208,50 @@
         return;
       }
 
-      // যদি কুলডাউনে থাকে তবে নতুন করে বাটন খুঁজবে বা চাপবে না
-      if (isCooldown) return;
+      // যদি বর্তমানে ক্লিক করার বিরতিতে থাকে তবে অপেক্ষা করবে
+      if (isActionPending) return;
 
-      // "Match Again" বাটন খোঁজা
-      const allElements = Array.from(document.querySelectorAll("button, div, span, a"));
-      const matchBtn = allElements.find(el => {
-        const text = (el.textContent || "").trim();
-        return text === "Match Again" && el.offsetParent !== null && !el.closest("#cyberMatchPanel");
-      });
+      // ২. 'No match found' পেজ সম্পূর্ণ এসেছে কি না তা নিশ্চিত হওয়া
+      const hasNoMatch = bodyText.includes("No match found") || bodyText.includes("after multiple attempts");
 
-      if (matchBtn) {
-        isCooldown = true; // ক্লিক লক অন
-        setStatus("Clicking...", "#ffbb00");
-        safeClick(matchBtn);
+      if (hasNoMatch) {
+        const allElements = Array.from(document.querySelectorAll("button, div, span, a"));
+        const matchBtn = allElements.find(el => {
+          const text = (el.textContent || "").trim();
+          return text === "Match Again" && el.offsetParent !== null && !el.closest("#cyberMatchPanel");
+        });
 
-        // ২.৫ সেকেন্ডের জন্য বিরতি, যাতে "Frequent operation" না ঘটে
-        setTimeout(() => {
-          isCooldown = false;
-          if (isRunning) setStatus("Scanning...", "#00f2fe");
-        }, 2500);
-      } else {
-        setStatus("Scanning...", "#00f2fe");
+        if (matchBtn) {
+          isActionPending = true;
+          setStatus("Waiting 1.5s...", "#ffbb00");
+
+          // সার্ভারের সেশন স্টেবল হওয়ার জন্য ১.৫ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
+          setTimeout(() => {
+            if (!isRunning) return;
+            setStatus("Matching...", "#38ef7d");
+            triggerSmoothClick(matchBtn);
+
+            // ক্লিক করার পর পরবর্তী ৪ সেকেন্ড কোনো ক্লিক হবে না
+            setTimeout(() => {
+              isActionPending = false;
+              if (isRunning) setStatus("Scanning...", "#00f2fe");
+            }, 4000);
+          }, 1500);
+          return;
+        }
       }
-    }, 450); // নিরাপদ ও রিল্যাক্সড স্ক্যান ইন্টারভ্যাল
+
+      // স্বাভাবিক সার্চ চলার সময়
+      if (bodyText.includes("Searching available orders") || bodyText.includes("Matching")) {
+        setStatus("Searching...", "#00f2fe");
+      }
+    }, 500);
   }
 
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
-    isCooldown = false;
+    isActionPending = false;
     try {
       customAudio.load();
     } catch (e) {}
@@ -247,7 +261,7 @@
 
   stopBtn.onclick = () => {
     isRunning = false;
-    isCooldown = false;
+    isActionPending = false;
     if (monitorInterval) clearInterval(monitorInterval);
     setStatus("Stopped", "#ff4e50");
   };
@@ -258,7 +272,7 @@
     panel.remove();
   };
 
-  // ড্র্যাগিং হ্যান্ডলার
+  // ড্র্যাগিং সাপোর্ট
   (function initDrag() {
     const header = document.getElementById("cmpHeader");
     let isDragging = false;
@@ -290,3 +304,4 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
+    
