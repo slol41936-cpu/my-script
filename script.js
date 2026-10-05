@@ -1,5 +1,5 @@
 (function () {
-  // আগের প্যানেল পরিষ্কার করা
+  // পূর্ববর্তী প্যানেল ক্লিনআপ
   const oldUI = document.getElementById("cyberMatchPanel");
   if (oldUI) oldUI.remove();
   const oldCSS = document.getElementById("cyberMatchCSS");
@@ -125,15 +125,54 @@
     statusEl.style.borderColor = color;
   }
 
-  // ৩. গিটহাব অডিও
-  const soundUrl = "https://raw.githubusercontent.com/slol41936-cpu/my-script/ba67b11cb26ceb4ebdfa793c650e3be88d2cab0d/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3";
-  const customAudio = new Audio(soundUrl);
+  // ৩. অডিও ইঞ্জিন (এনকোডেড লিঙ্ক + লাইভ বিপ সাউন্ড)
+  const soundUrl1 = "https://raw.githubusercontent.com/slol41936-cpu/my-script/ba67b11cb26ceb4ebdfa793c650e3be88d2cab0d/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
+  const soundUrl2 = "https://raw.githubusercontent.com/slol41936-cpu/my-script/ba67b11cb26ceb4ebdfa793c650e3be88d2cab0d/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3";
+  
+  const customAudio = new Audio(soundUrl1);
 
   function playAlertSound() {
-    customAudio.play().catch(() => {});
+    // অডিও প্লে করার চেষ্টা
+    let played = false;
+    try {
+      customAudio.currentTime = 0;
+      const promise = customAudio.play();
+      if (promise !== undefined) {
+        promise.then(() => { played = true; }).catch(() => {
+          // দ্বিতীয় লিঙ্ক ট্রাই
+          const fallbackAudio = new Audio(soundUrl2);
+          fallbackAudio.play().catch(() => {});
+        });
+      }
+    } catch (e) {}
+
+    // নিশ্চিত অ্যালার্ম: ব্রাউজারের নিজস্ব সিন্থেসাইজার (কোনো নেটওয়ার্ক ফাইল না লাগলেও ১০০% বাজবে)
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      function beep(freq, delay, dur) {
+        setTimeout(() => {
+          try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "square"; // স্পষ্ট লাউড সাউন্ড
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + dur);
+          } catch(err) {}
+        }, delay);
+      }
+      for (let i = 0; i < 6; i++) {
+        beep(900, i * 300, 0.2);
+        beep(1200, i * 300 + 150, 0.2);
+      }
+    } catch (e) {}
   }
 
-  // ৪. খাঁটি মোবাইল টাচ ও মাউস ক্লিক সিমুলেশন
+  // ৪. খাঁটি মোবাইল টাচ ও মাউস ক্লিক
   function forceClick(target) {
     if (!target) return;
     const events = ["touchstart", "touchend", "mousedown", "mouseup", "click"];
@@ -152,7 +191,7 @@
     }
   }
 
-  // ৫. চেকার ইঞ্জিন
+  // ৫. হাই-স্পিড চেকার ইঞ্জিন (প্রতি ২০০ মিলিসেকেন্ডে চেক)
   function startMonitoring() {
     if (monitorInterval) clearInterval(monitorInterval);
 
@@ -162,23 +201,27 @@
       const currentUrl = window.location.href;
       const bodyText = document.body ? document.body.innerText : "";
 
-      // অর্ডার লক হয়েছে কিনা যাচাই
+      // স্ক্রিনশটের হুবহু ম্যাচিং কন্ডিশন
       const hasOrderMatched = 
+        bodyText.includes("Matched, pending payment") || 
+        bodyText.includes("We have matched the best order") ||
+        bodyText.includes("Redirecting to the payment page") ||
+        bodyText.includes("Cancel Order") ||
+        (bodyText.includes("Pay ₹") || bodyText.includes("Time left to pay")) ||
         currentUrl.includes("cashier") || 
-        bodyText.includes("Countdown to Expiry") || 
-        (bodyText.includes("Paytm") && bodyText.includes("UTR")) ||
         document.querySelector("canvas") || 
         document.querySelector("img[src*='qr'], img[src*='qrcode']");
 
-      if (hasOrderMatched && !bodyText.includes("Searching available orders") && !bodyText.includes("Matching")) {
+      // অর্ডার পাওয়া মাত্রই তাত্ক্ষণিক স্টপ ও মিউজিক
+      if (hasOrderMatched && !bodyText.includes("Searching available orders") && !bodyText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
-        setStatus("LOCKED!", "#38ef7d");
+        setStatus("ORDER MATCHED!", "#38ef7d");
         playAlertSound();
         return;
       }
 
-      // "Match Again" বাটন খোঁজা
+      // "Match Again" বাটন ক্লিক
       const allElements = Array.from(document.querySelectorAll("div, button, span, p, a"));
       const matchBtn = allElements.find(el => {
         const text = (el.textContent || "").trim();
@@ -194,14 +237,23 @@
       } else {
         setStatus("Scanning...", "#00f2fe");
       }
-    }, 500);
+    }, 200); // অতি দ্রুত ২০০ms রেসপন্স টাইম
   }
 
   // বাটন ইভেন্ট
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
-    customAudio.load();
+    
+    // ব্রাউজারের অটো-প্লে ব্লকিং ছাড়াতে ইউজার ক্লিকের সময়েই অডিও আনলক
+    try {
+      customAudio.load();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    } catch(e) {}
+
     setStatus("Scanning...", "#00f2fe");
     startMonitoring();
   };
@@ -250,4 +302,3 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
-    
