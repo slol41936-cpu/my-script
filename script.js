@@ -1,11 +1,11 @@
 (function () {
-  // আগের প্যানেল পরিষ্কার করা
+  // পূর্ববর্তী প্যানেল ও স্টাইল ক্লিনআপ
   const prevPanel = document.getElementById("cyberMatchPanel");
   if (prevPanel) prevPanel.remove();
   const prevCSS = document.getElementById("cyberMatchCSS");
   if (prevCSS) prevCSS.remove();
 
-  // ১. অফ-হোয়াইট ও প্রফেশনাল লাইট থিম সিএসএস
+  // ১. অফ-হোয়াইট লাইট থিম সিএসএস
   const style = document.createElement("style");
   style.id = "cyberMatchCSS";
   style.innerHTML = `
@@ -125,7 +125,7 @@
 
   let isRunning = false;
   let monitorInterval = null;
-  let isClickCoolingDown = false;
+  let isActionLocked = false;
 
   function setStatus(text, color = "#2563eb") {
     if (!statusEl) return;
@@ -143,9 +143,7 @@
       customAudio.currentTime = 0;
       const playPromise = customAudio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          fallbackBeep();
-        });
+        playPromise.catch(() => fallbackBeep());
       }
     } catch (e) {
       fallbackBeep();
@@ -174,24 +172,20 @@
     } catch (e) {}
   }
 
-  // ৪. ক্লিন মাউস ক্লিক
-  function performClick(element) {
-    if (!element) return;
+  // ৪. খাঁটি সিঙ্গেল ক্লিক (ডাবল রিকোয়েস্ট প্রতিরোধক)
+  function singleHumanClick(target) {
+    if (!target) return;
     try {
-      const rect = element.getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top + rect.height / 2;
-      const eventOpts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
-      element.dispatchEvent(new MouseEvent("mousedown", eventOpts));
-      element.dispatchEvent(new MouseEvent("mouseup", eventOpts));
-      element.dispatchEvent(new MouseEvent("click", eventOpts));
-      if (typeof element.click === "function") {
-        element.click();
+      if (typeof target.click === "function") {
+        target.click();
+      } else {
+        const evt = new MouseEvent("click", { bubbles: true, cancelable: true, view: window });
+        target.dispatchEvent(evt);
       }
     } catch (e) {}
   }
 
-  // ৫. স্ক্রিন স্ক্যানার
+  // ৫. স্ক্যানিং ইঞ্জিন
   function startMonitoring() {
     if (monitorInterval) clearInterval(monitorInterval);
 
@@ -201,7 +195,7 @@
       const pageText = document.body ? document.body.innerText : "";
       const currentUrl = window.location.href;
 
-      // অর্ডার পাওয়ার নিশ্চিত মার্কার চেক
+      // ক. অর্ডার ধরার সমস্ত নিশ্চিত মার্কার চেক
       const isOrderConfirmed = 
         pageText.includes("Matched, pending payment") || 
         pageText.includes("pending payment") ||
@@ -211,22 +205,21 @@
         pageText.includes("Pay ₹") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার পাওয়া মাত্র স্ক্রিপ্ট স্টপ, সাউন্ড প্লে এবং UI তাত্ক্ষণিক রিমুভ
+      // অর্ডার পাওয়া মাত্র সাথে সাথে স্টপ, সাউন্ড প্লে এবং UI রিমুভ
       if (isOrderConfirmed && !pageText.includes("Searching available orders") && !pageText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
         triggerAlarm();
         
         const currentPanel = document.getElementById("cyberMatchPanel");
-        if (currentPanel) {
-          currentPanel.remove();
-        }
+        if (currentPanel) currentPanel.remove();
         return;
       }
 
-      if (isClickCoolingDown) return;
+      // যদি অলরেডি অ্যাকশন প্রসেসিং বা বিরতিতে থাকে তবে অপেক্ষা করবে
+      if (isActionLocked) return;
 
-      // 'No match found' পেজ চেক
+      // খ. 'No match found' পেজ সম্পূর্ণ এসেছে কি না
       const isNoMatchPage = pageText.includes("No match found") || pageText.includes("after multiple attempts");
 
       if (isNoMatchPage) {
@@ -237,36 +230,37 @@
         });
 
         if (matchButton) {
-          isClickCoolingDown = true;
-          setStatus("Waiting 1.2s...", "#d97706");
+          isActionLocked = true;
+          setStatus("Waiting 2s...", "#d97706");
 
-          // ১.২ সেকেন্ড স্বাভাবিক বিরতি দিয়ে ক্লিক
+          // সার্ভার শান্ত হওয়ার জন্য পুরো ২ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
           setTimeout(() => {
             if (!isRunning) return;
             setStatus("Retrying...", "#0f8b44");
-            performClick(matchButton);
+            singleHumanClick(matchButton);
 
-            // ৩.৫ সেকেন্ড কুলডাউন লক
+            // নতুন স্ক্যানিং শুরু না হওয়া পর্যন্ত ৪ সেকেন্ড ক্লিক লক থাকবে
             setTimeout(() => {
-              isClickCoolingDown = false;
+              isActionLocked = false;
               if (isRunning) setStatus("Scanning...", "#2563eb");
-            }, 3500);
-          }, 1200);
+            }, 4000);
+          }, 2000);
           return;
         }
       }
 
+      // স্বাভাবিক সার্চিং স্ট্যাটাস
       if (pageText.includes("Searching available orders") || pageText.includes("Matching")) {
         setStatus("Searching...", "#2563eb");
       }
-    }, 300);
+    }, 400);
   }
 
   // বাটন ইভেন্ট
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
-    isClickCoolingDown = false;
+    isActionLocked = false;
     try {
       customAudio.load();
     } catch (e) {}
@@ -276,7 +270,7 @@
 
   stopBtn.onclick = () => {
     isRunning = false;
-    isClickCoolingDown = false;
+    isActionLocked = false;
     if (monitorInterval) clearInterval(monitorInterval);
     setStatus("Stopped", "#d93025");
   };
@@ -319,4 +313,4 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
-                          
+              
