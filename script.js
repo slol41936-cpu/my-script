@@ -1,455 +1,291 @@
-(async function () {
-  // ===== সেটিংস =====
-  const API = "https://apiweb.apiarbpay.com/ar-wallet/";
-  const BANK_CODE = "moneyView";   // যে বাউন্ড ব্যাংক দিয়ে কিনবেন (bankCode)
-  const START_DELAY = 1300;        // ms, শুরুর বিরতি (সার্ভারের 1083 দেখে নিজে ঠিক করে নেবে)
-  const MIN_DELAY = 900;           // ms, এর চেয়ে দ্রুত কখনো যাবে না
-  const MAX_DELAY = 4000;          // ms, সার্ভার বেশি আটকালে সর্বোচ্চ এতটা ধীর হবে
-  const MAX_ERRORS = 8;            // পরপর এতবার error হলে নিজে থেমে যাবে
-  const AUTO_RELOAD = true;        // ম্যাচ হলে পেজ রিলোড করে পেমেন্ট পেজে নিয়ে যাবে
+(function () {
+  // পূর্ববর্তী প্যানেল ক্লিনআপ
+  const oldUI = document.getElementById("cyberMatchPanel");
+  if (oldUI) oldUI.remove();
+  const oldCSS = document.getElementById("cyberMatchCSS");
+  if (oldCSS) oldCSS.remove();
 
-  // ===== স্টাইল =====
-  if (!document.getElementById("cyberStyle")) {
-    const st = document.createElement("style");
-    st.id = "cyberStyle";
-    st.innerHTML = `
-    #cyberPanel{position:fixed;right:20px;bottom:20px;width:280px;z-index:999999;background:#f0ebe4;border-radius:22px;
-      box-shadow:0 20px 45px rgba(0,0,0,.25),0 8px 16px rgba(0,0,0,.15),inset 0 1px 1px rgba(255,255,255,.9);
-      border:1px solid rgba(255,255,255,.8);overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;user-select:none;touch-action:none}
-    .cyber-header{padding:10px 14px 4px;display:flex;align-items:center;gap:8px;cursor:move}
-    .cyber-header-badge{width:26px;height:26px;background:radial-gradient(circle at 35% 35%,#ebd7b7,#bfa37b,#8a704c);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px}
-    .cyber-header-title{color:#7d7265;font-size:11px;letter-spacing:.8px;font-weight:800;text-transform:uppercase}
-    .cyber-body{padding:8px 14px 14px;display:flex;flex-direction:column;gap:8px}
-    .cyber-label{color:#9d9489;font-size:10px;font-weight:700;margin-bottom:2px;display:block;text-transform:uppercase;letter-spacing:.5px}
-    .toggle-container{display:grid;grid-template-columns:1.2fr 1fr;gap:6px}
-    .toggle-option{padding:7px 0;text-align:center;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;background:#ded7ce;color:#8c8378}
-    .toggle-option.active{background:#509796;color:#fff;box-shadow:0 0 0 1.5px rgba(226,177,89,.9),0 4px 10px rgba(80,151,150,.4)}
-    .range-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-    .cyber-input{width:100%;box-sizing:border-box;height:36px;padding:0 10px;border-radius:10px;border:1px solid rgba(0,0,0,.04);background:#ebe4dc;color:#554e44;font-size:13px;font-weight:700;outline:none}
-    .cyber-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .cyber-btn{height:34px;border:none;border-radius:17px;cursor:pointer;font-size:11px;font-weight:800;text-transform:uppercase}
-    .start-btn{background:#54748b;color:#fff;border:1.2px solid #d1b480}
-    .stop-btn{background:#b55e65;color:#ffd2d5}
-    .cyber-status{background:#ded7cd;border-radius:10px;min-height:34px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ba5d58;font-size:11px;font-weight:700;text-transform:uppercase;padding:4px}
-    #overlay-status-container{display:flex;flex-direction:column;align-items:center;gap:15px}
-    #overlay-live-status{font-size:18px;color:#509796;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;text-align:center;padding:0 10px}
-    `;
-    document.head.appendChild(st);
-  }
-
-  // ===== ওভারলে =====
-  let overlay = document.getElementById("cyberOverlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "cyberOverlay";
-    overlay.style.cssText =
-      "position:fixed;inset:0;background:rgba(235,230,222,.88);backdrop-filter:blur(8px);z-index:999998;display:none;align-items:center;justify-content:center;color:#7d7265;font-family:Arial,sans-serif;";
-    overlay.innerHTML = `<div id="overlay-status-container">
-      <div id="overlay-live-status">INITIALIZING...</div>
-      <h1 style="font-size:22px;letter-spacing:6px;margin:0;opacity:.6;color:#554e44;">SYSTEM ACTIVE</h1></div>`;
-    document.body.appendChild(overlay);
-  }
-  const liveStatus = document.getElementById("overlay-live-status");
-
-  // ===== প্যানেল =====
-  let panel = document.getElementById("cyberPanel");
-  if (!panel) {
-    panel = document.createElement("div");
-    panel.id = "cyberPanel";
-    panel.innerHTML = `
-      <div class="cyber-header"><div class="cyber-header-badge">⚡</div><div class="cyber-header-title">⚡ SMART RANGE BUY</div></div>
-      <div class="cyber-body">
-        <div><label class="cyber-label">Payment Type</label>
-          <div class="toggle-container" id="orderTypeToggle">
-            <div class="toggle-option active" data-value="1">UPI</div>
-            <div class="toggle-option" data-value="2">BANK</div>
-          </div></div>
-        <div><label class="cyber-label">Amount Range (Min - Max)</label>
-          <div class="range-row">
-            <input type="text" inputmode="numeric" id="minAmount" class="cyber-input" value="1000">
-            <input type="text" inputmode="numeric" id="maxAmount" class="cyber-input" value="1499">
-          </div></div>
-        <div class="cyber-buttons">
-          <button id="startBtn" class="cyber-btn start-btn">START</button>
-          <button id="stopBtn" class="cyber-btn stop-btn">STOP</button>
-        </div>
-        <div class="cyber-status" id="cyberStatus">Ready</div>
-      </div>`;
-    document.body.appendChild(panel);
-  }
-  const statusEl = document.getElementById("cyberStatus");
-  const startBtn = document.getElementById("startBtn");
-  const stopBtn = document.getElementById("stopBtn");
-  const minEl = document.getElementById("minAmount");
-  const maxEl = document.getElementById("maxAmount");
-  const toggleEl = document.getElementById("orderTypeToggle");
-
-  [minEl, maxEl].forEach((el) =>
-    el.addEventListener("input", () => (el.value = el.value.replace(/[^0-9]/g, "")))
-  );
-
-  let running = false;
-  let orderType = 1;
-  let isPremium = false;
-  let balanceTimer = null;
-
-  toggleEl.querySelectorAll(".toggle-option").forEach((el) => {
-    el.onclick = () => {
-      toggleEl.querySelector(".active").classList.remove("active");
-      el.classList.add("active");
-      orderType = Number(el.dataset.value);
-    };
-  });
-
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-  function setStatus(msg) {
-    console.log(msg);
-    const bad = /denied|not found|Error|Stopped|🔴/i.test(msg);
-    const good = /SUCCESS|MATCHED|🟢/i.test(msg);
-    if (statusEl) {
-      statusEl.innerText = msg;
-      statusEl.style.color = bad ? "#ba5d58" : good ? "#3d8573" : "#7d7265";
+  // ১. সাইবারপাঙ্ক সিএসএস ইনজেকশন
+  const style = document.createElement("style");
+  style.id = "cyberMatchCSS";
+  style.innerHTML = `
+    #cyberMatchPanel {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 260px;
+      z-index: 9999999;
+      background: linear-gradient(180deg, #1d212d 0%, #11141c 100%);
+      border-radius: 14px;
+      border: 1.5px solid #363c4e;
+      box-shadow: 
+        0 0 15px rgba(0, 242, 254, 0.25),
+        0 15px 35px rgba(0, 0, 0, 0.7),
+        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      box-sizing: border-box;
     }
-    if (liveStatus) {
-      liveStatus.innerText = msg;
-      liveStatus.style.color = bad ? "#ba5d58" : "#3d8573";
+
+    .cmp-header {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.08));
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: move;
+      touch-action: none;
     }
-  }
 
-  function loadScript(src) {
-    return new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = src;
-      s.onload = res;
-      s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
-
-  // ===== Firebase =====
-  if (!window.firebase) {
-    await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-    await loadScript("https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js");
-  }
-  if (!firebase.apps.length) {
-    firebase.initializeApp({
-      apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
-      authDomain: "my-ar-automation.firebaseapp.com",
-      projectId: "my-ar-automation",
-      storageBucket: "my-ar-automation.firebasestorage.app",
-      messagingSenderId: "443374813761",
-      appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
-    });
-  }
-
-  // ===== ইউজার তথ্য =====
-  function getUserInfo() {
-    try {
-      return JSON.parse(localStorage.getItem("userInfo"));
-    } catch {
-      return null;
+    .cmp-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, #00f2fe, #4facfe, #ff0844);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
     }
-  }
-  function getMemberId() {
-    const u = getUserInfo();
-    return u?.value?.memberId || u?.value?.memberld || "";
-  }
 
-  async function checkAccess() {
-    try {
-      const id = getMemberId();
-      if (!id) return { allowed: false, isPremium: false };
-      const snap = await firebase
-        .firestore()
-        .collection("members")
-        .where("walletUserId", "==", String(id))
-        .where("active", "==", true)
-        .limit(1)
-        .get();
-      if (snap.empty) return { allowed: false, isPremium: false };
-      return { allowed: true, isPremium: snap.docs[0].data().is_premium === true };
-    } catch (e) {
-      console.log(e);
-      return { allowed: false, isPremium: false };
+    .cmp-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: radial-gradient(circle at 50% 0%, rgba(79, 172, 254, 0.08), transparent 70%);
     }
-  }
 
-  async function syncBalance() {
-    try {
-      const u = getUserInfo();
-      const id = getMemberId();
-      const bal = u?.balance ?? u?.value?.balance;
-      if (!id || bal === undefined || bal === null) return;
-      const db = firebase.firestore();
-      const snap = await db.collection("members").where("walletUserId", "==", String(id)).limit(1).get();
-      if (snap.empty) return;
-      const doc = snap.docs[0];
-      const oldBal = Number(doc.data().balance ?? 0);
-      const newBal = Number(bal);
-      if (oldBal === newBal) return;
-      const diff = newBal - oldBal;
-      await db.collection("transactions").add({
-        walletUserId: String(id),
-        previousBalance: oldBal,
-        updatedBalance: newBal,
-        amount: Math.abs(diff),
-        type: diff > 0 ? "credit" : "debit",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await db.collection("members").doc(doc.id).update({
-        balance: newBal,
-        balanceUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } catch (e) {
-      if (e && e.code === "permission-denied") {
-        clearInterval(balanceTimer);
-        balanceTimer = null;
-        console.log("Balance sync off (Firestore rules block client writes)");
-      } else {
-        console.error("Balance sync error:", e);
-      }
+    .cmp-btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
     }
-  }
 
-  const access = await checkAccess();
-  isPremium = access.isPremium;
-  if (!balanceTimer) {
-    syncBalance();
-    balanceTimer = setInterval(syncBalance, 15000);
-  }
-  if (!access.allowed) {
-    setStatus("Access denied");
-    return;
-  }
-
-  function updateStartState() {
-    const blocked = !isPremium && Number(minEl.value) < 1000;
-    startBtn.disabled = blocked;
-    startBtn.style.opacity = blocked ? "0.5" : "1";
-    startBtn.style.cursor = blocked ? "not-allowed" : "pointer";
-  }
-  if (!isPremium) minEl.value = "1000";
-  minEl.addEventListener("input", updateStartState);
-  updateStartState();
-
-  // ===== টোকেন ও হেডার =====
-  let token = null;
-  const rawToken = localStorage.getItem("token");
-  if (rawToken) {
-    try {
-      token = JSON.parse(rawToken)?.value || rawToken;
-    } catch {
-      token = rawToken;
+    .cmp-btn {
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-  }
-  if (!token && window.token?.value) token = window.token.value;
-  if (!token) {
-    setStatus("Token not found");
-    return;
-  }
 
-  const deviceCode = localStorage.getItem("arb_device_code") || crypto.randomUUID().replace(/-/g, "");
-  localStorage.setItem("arb_device_code", deviceCode);
-
-  const headers = {
-    accept: "application/json, text/plain, */*",
-    "content-type": "application/json",
-    authorization: "Bearer " + token,
-    deviceId: "undefined",
-    deviceType: "3",
-    page: "Arb",
-    language: "1",
-    memberId: String(getMemberId()),
-    deviceCode: deviceCode
-  };
-
-  async function post(endpoint, body) {
-    const res = await fetch(API + endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body)
-    });
-    return res.json();
-  }
-
-  // বাউন্ড ব্যাংক থেকে buyerKycId (id) খুঁজে বের করে
-  async function getKycId(min, max, type) {
-    const r = await post("kycCenter/getBanks/bankListAndBoundListForQuick", {
-      sourceType: 2,
-      type: type,
-      minAmount: min,
-      maxAmount: max
-    });
-    const bound = r?.data?.boundBanks || [];
-    const hit = bound.find((b) => b.bankCode === BANK_CODE);
-    if (!hit) {
-      throw new Error(
-        "Bank not found: " + BANK_CODE + " (available: " + bound.map((b) => b.bankCode).join(", ") + ")"
-      );
+    .cmp-btn-start {
+      background: linear-gradient(180deg, #1b4b3e 0%, #0d2821 100%);
+      color: #38ef7d;
+      border-color: #38ef7d;
+      box-shadow: 0 0 10px rgba(56, 239, 125, 0.3), inset 0 1px 1px rgba(255,255,255,0.2);
     }
-    return hit.id;
-  }
 
-  function findOrder(obj, depth) {
-    if (!obj || typeof obj !== "object" || depth > 5) return null;
-    if (obj.platformOrder) return obj.platformOrder;
-    for (const k of Object.keys(obj)) {
-      const v = findOrder(obj[k], depth + 1);
-      if (v) return v;
+    .cmp-btn-start:hover {
+      filter: brightness(1.2);
+      box-shadow: 0 0 15px rgba(56, 239, 125, 0.5);
     }
-    return null;
+
+    .cmp-btn-stop {
+      background: linear-gradient(180deg, #501d24 0%, #2b0d12 100%);
+      color: #ff4e50;
+      border-color: #ff4e50;
+      box-shadow: 0 0 10px rgba(255, 78, 80, 0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+    }
+
+    .cmp-btn-stop:hover {
+      filter: brightness(1.2);
+      box-shadow: 0 0 15px rgba(255, 78, 80, 0.5);
+    }
+
+    .cmp-status-box {
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #4facfe;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 8px rgba(0, 242, 254, 0.1);
+      transition: all 0.2s ease;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ২. প্যানেল এইচটিএমএল
+  const panel = document.createElement("div");
+  panel.id = "cyberMatchPanel";
+  panel.innerHTML = `
+    <div class="cmp-header" id="cmpHeader">
+      <div class="cmp-title">⚡ AUTO MATCH AGAIN</div>
+      <div style="font-size: 10px; color: #6c7993; cursor: pointer;" id="cmpClose">✕</div>
+    </div>
+    <div class="cmp-body">
+      <div class="cmp-btn-row">
+        <button class="cmp-btn cmp-btn-start" id="cmpStart">▶ Start</button>
+        <button class="cmp-btn cmp-btn-stop" id="cmpStop">■ Stop</button>
+      </div>
+      <div class="cmp-status-box" id="cmpStatus">Status: Ready</div>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  const startBtn = document.getElementById("cmpStart");
+  const stopBtn = document.getElementById("cmpStop");
+  const statusEl = document.getElementById("cmpStatus");
+  const closeBtn = document.getElementById("cmpClose");
+
+  let isRunning = false;
+  let monitorInterval = null;
+
+  function setStatus(text, color = "#4facfe") {
+    if (!statusEl) return;
+    statusEl.innerText = "Status: " + text;
+    statusEl.style.color = color;
+    statusEl.style.borderColor = color;
   }
 
-  function alarm() {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.3, 0.6].forEach((t) => {
-        const o = ctx.createOscillator();
-        o.connect(ctx.destination);
-        o.frequency.value = 880;
-        o.start(ctx.currentTime + t);
-        o.stop(ctx.currentTime + t + 0.2);
-      });
-    } catch {}
-    try {
-      navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 300]);
-    } catch {}
-  }
+  // ৩. GitHub থেকে কাস্টম সাউন্ড বাজানোর ফাংশন (ফলব্যাক অসিলেটর সহ)
+  const soundUrl = "https://raw.githubusercontent.com/slol41936-cpu/my-script/ba67b11cb26ceb4ebdfa793c650e3be88d2cab0d/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX.mp3";
+  const customAudio = new Audio(soundUrl);
 
-  // সার্ভার অর্ডার ম্যাচ করলে true
-  function isMatched(d) {
-    if (!d) return false;
-    const info = d.matchInfo || {};
-    if (d.matchResult && d.matchResult !== "NOT_MATCHED") return true;
-    if (d.buyResult || d.pendingOrder) return true;
-    if (Number(info.countDown) > 0 || Number(info.payTime) > 0) return true;
-    return false;
-  }
-
-  // ===== মূল লুপ =====
-  async function mainLoop(min, max, type, kycId) {
-    let tries = 0;
-    let errors = 0;
-    let okStreak = 0;
-    let delay = START_DELAY;
-    while (running) {
-      let wait = delay;
+  function playAlertSound() {
+    customAudio.play().catch(() => {
       try {
-        const r = await post("smartRangeBuy/match/start", {
-          maxAmount: max,
-          minAmount: min,
-          orderType: type,
-          buyBankCode: BANK_CODE,
-          buyerKycId: kycId
-        });
-        tries++;
-
-        if (r.code === "1083") {
-          // "Frequent operation" = সার্ভারের রেট লিমিট, আসল error নয়। ধীর হই।
-          okStreak = 0;
-          delay = Math.min(delay + 400, MAX_DELAY);
-          wait = delay;
-          setStatus("Slowing down | wait " + (wait / 1000).toFixed(1) + "s | #" + tries);
-        } else if (r.code !== "1") {
-          errors++;
-          wait = 1000;
-          setStatus("Error " + r.code + ": " + (r.msg || ""));
-          if (errors >= MAX_ERRORS) {
-            running = false;
-            overlay.style.display = "none";
-            setStatus("Error: too many failures, stopped");
-            return;
-          }
-        } else {
-          errors = 0;
-          okStreak++;
-          if (okStreak >= 5 && delay > MIN_DELAY) {
-            delay = Math.max(delay - 100, MIN_DELAY);
-            okStreak = 0;
-          }
-          const d = r.data || {};
-          if (isMatched(d)) {
-            running = false;
-            console.log("MATCH RESPONSE:", JSON.stringify(r));
-            const order = findOrder(d, 0);
-            alarm();
-            setStatus("🟢 MATCHED " + (order || "") + " | result: " + d.matchResult);
-            overlay.style.display = "none";
-            if (AUTO_RELOAD) {
-              await sleep(1000);
-              location.reload();
-            }
-            return;
-          }
-          setStatus("Searching ₹" + min + "-" + max + " | #" + tries + " " + (d.matchInfo?.status || ""));
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(freq, delay, dur) {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + dur);
+          }, delay);
         }
-      } catch (e) {
-        console.error(e);
-        errors++;
-        wait = 1000;
-        setStatus("Error. Retrying...");
-        if (errors >= MAX_ERRORS) {
-          running = false;
-          overlay.style.display = "none";
-          setStatus("Error: network failures, stopped");
-          return;
+        for (let i = 0; i < 4; i++) {
+          beep(880, i * 300, 0.2);
         }
-      }
-      await sleep(wait);
-    }
+      } catch (e) {}
+    });
   }
 
-  startBtn.onclick = async () => {
-    if (running) return;
-    const min = Number(minEl.value);
-    const max = Number(maxEl.value);
-    if (!min || !max) return setStatus("Enter amount range");
-    if (min > max) return setStatus("Error: min is greater than max");
-    if (!isPremium && min < 1000) return setStatus("Minimum order value is 1000");
+  // ৪. চেকার ইঞ্জিন
+  function startMonitoring() {
+    if (monitorInterval) clearInterval(monitorInterval);
 
-    running = true;
-    overlay.style.display = "flex";
-    setStatus("🟢 Preparing...");
-    try {
-      const kycId = await getKycId(min, max, orderType);
-      if (!running) return;
-      setStatus("🟢 Running | ₹" + min + "-" + max);
-      mainLoop(min, max, orderType, kycId);
-    } catch (e) {
-      running = false;
-      overlay.style.display = "none";
-      setStatus(String(e.message || e));
-    }
+    monitorInterval = setInterval(() => {
+      if (!isRunning) return;
+
+      const currentUrl = window.location.href;
+      const bodyText = document.body ? document.body.innerText : "";
+
+      // অর্ডার পাওয়ার চেক
+      const hasOrderMatched = 
+        currentUrl.includes("cashier") || 
+        currentUrl.includes("order") || 
+        bodyText.includes("Countdown to Expiry") || 
+        (bodyText.includes("Paytm") && bodyText.includes("UTR")) ||
+        document.querySelector("canvas") || 
+        document.querySelector("img[src*='qr'], img[src*='qrcode']");
+
+      if (hasOrderMatched && !bodyText.includes("Searching available orders") && !bodyText.includes("Matching")) {
+        isRunning = false;
+        clearInterval(monitorInterval);
+        setStatus("LOCKED!", "#38ef7d");
+        playAlertSound();
+        return;
+      }
+
+      // "No match found" এবং "Match Again" বাটন ক্লিক
+      const buttons = Array.from(document.querySelectorAll("button, div, span, a"));
+      const matchAgainBtn = buttons.find(el => {
+        const txt = (el.innerText || "").trim().toLowerCase();
+        return (txt === "match again" || txt.includes("match again")) && el.offsetParent !== null;
+      });
+
+      if (matchAgainBtn) {
+        setStatus("Retrying...", "#ffbb00");
+        matchAgainBtn.click();
+      } else {
+        setStatus("Scanning...", "#00f2fe");
+      }
+    }, 400);
+  }
+
+  // ৫. বাটন ইভেন্ট
+  startBtn.onclick = () => {
+    if (isRunning) return;
+    isRunning = true;
+    // ব্রাউজারের অটোপ্লে পারমিশন নিশ্চিত করার জন্য স্টার্ট চাপার সাথে সাথে লোড কল
+    customAudio.load();
+    setStatus("Scanning...", "#00f2fe");
+    startMonitoring();
   };
 
   stopBtn.onclick = () => {
-    running = false;
-    overlay.style.display = "none";
-    setStatus("🔴 Stopped");
+    isRunning = false;
+    if (monitorInterval) clearInterval(monitorInterval);
+    setStatus("Stopped", "#ff4e50");
   };
 
-  // ===== ড্র্যাগ (মাউস + টাচ) =====
-  (function () {
-    const header = panel.querySelector(".cyber-header");
-    let drag = false, ox = 0, oy = 0;
-    const start = (x, y) => {
-      drag = true;
-      ox = x - panel.offsetLeft;
-      oy = y - panel.offsetTop;
-    };
-    const move = (x, y) => {
-      if (!drag) return;
-      panel.style.left = x - ox + "px";
-      panel.style.top = y - oy + "px";
+  closeBtn.onclick = () => {
+    isRunning = false;
+    if (monitorInterval) clearInterval(monitorInterval);
+    panel.remove();
+  };
+
+  // ৬. ড্র্যাগিং হ্যান্ডলার
+  (function initDrag() {
+    const header = document.getElementById("cmpHeader");
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    function onStart(e) {
+      isDragging = true;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      startX = x - panel.offsetLeft;
+      startY = y - panel.offsetTop;
+    }
+
+    function onMove(e) {
+      if (!isDragging) return;
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      panel.style.left = `${Math.max(10, Math.min(window.innerWidth - 270, x - startX))}px`;
+      panel.style.top = `${Math.max(10, Math.min(window.innerHeight - 150, y - startY))}px`;
       panel.style.right = "auto";
       panel.style.bottom = "auto";
-    };
-    header.addEventListener("mousedown", (e) => start(e.clientX, e.clientY));
-    document.addEventListener("mousemove", (e) => move(e.clientX, e.clientY));
-    document.addEventListener("mouseup", () => (drag = false));
-    header.addEventListener("touchstart", (e) => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-    document.addEventListener("touchmove", (e) => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-    document.addEventListener("touchend", () => (drag = false));
+    }
+
+    function onEnd() {
+      isDragging = false;
+    }
+
+    header.addEventListener("mousedown", onStart);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
+    header.addEventListener("touchstart", onStart, { passive: true });
+    document.addEventListener("touchmove", onMove, { passive: true });
+    document.addEventListener("touchend", onEnd);
   })();
 })();
+        
