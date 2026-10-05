@@ -1,9 +1,11 @@
 (function () {
-  const oldUI = document.getElementById("cyberMatchPanel");
-  if (oldUI) oldUI.remove();
-  const oldCSS = document.getElementById("cyberMatchCSS");
-  if (oldCSS) oldCSS.remove();
+  // পূর্বের কোনো ইনস্ট্যান্স থাকলে তা মুছে ফেলা
+  const prevPanel = document.getElementById("cyberMatchPanel");
+  if (prevPanel) prevPanel.remove();
+  const prevCSS = document.getElementById("cyberMatchCSS");
+  if (prevCSS) prevCSS.remove();
 
+  // ১. হালকা ও অপ্টিমাইজড সিএসএস
   const style = document.createElement("style");
   style.id = "cyberMatchCSS";
   style.innerHTML = `
@@ -11,40 +13,38 @@
       position: fixed;
       right: 15px;
       bottom: 15px;
-      width: 210px;
+      width: 200px;
       z-index: 9999999;
-      background: linear-gradient(180deg, #1d212d 0%, #11141c 100%);
-      border-radius: 12px;
-      border: 1.2px solid #363c4e;
-      box-shadow: 0 0 12px rgba(0, 242, 254, 0.25), 0 10px 25px rgba(0, 0, 0, 0.7);
-      overflow: hidden;
+      background: #151821;
+      border-radius: 10px;
+      border: 1px solid #363c4e;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       user-select: none;
       box-sizing: border-box;
-      transition: opacity 0.3s ease, transform 0.3s ease;
     }
     .cmp-header {
-      padding: 7px 10px;
+      padding: 6px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       cursor: move;
       touch-action: none;
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.02);
     }
     .cmp-title {
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 800;
       letter-spacing: 0.8px;
       color: #00f2fe;
       text-transform: uppercase;
     }
     .cmp-body {
-      padding: 10px;
+      padding: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
     .cmp-btn-row {
       display: grid;
@@ -52,45 +52,42 @@
       gap: 6px;
     }
     .cmp-btn {
-      height: 28px;
+      height: 26px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 700;
       border: 1px solid transparent;
       text-transform: uppercase;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 3px;
     }
     .cmp-btn-start {
       background: #1b4b3e;
       color: #38ef7d;
       border-color: #38ef7d;
-      box-shadow: 0 0 8px rgba(56, 239, 125, 0.2);
     }
     .cmp-btn-stop {
       background: #501d24;
       color: #ff4e50;
       border-color: #ff4e50;
-      box-shadow: 0 0 8px rgba(255, 78, 80, 0.2);
     }
     .cmp-status-box {
       border: 1px solid rgba(0, 242, 254, 0.25);
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 6px;
-      padding: 5px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 5px;
+      padding: 4px;
       text-align: center;
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 700;
       color: #4facfe;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
     }
   `;
   document.head.appendChild(style);
 
+  // ২. ইউআই প্যানেল তৈরি
   const panel = document.createElement("div");
   panel.id = "cyberMatchPanel";
   panel.innerHTML = `
@@ -115,7 +112,7 @@
 
   let isRunning = false;
   let monitorInterval = null;
-  let isActionPending = false; // অতিরিক্ত ক্লিক পুরোপুরি ঠেকানোর লক
+  let isActionPending = false;
 
   function setStatus(text, color = "#4facfe") {
     if (!statusEl) return;
@@ -124,55 +121,211 @@
     statusEl.style.borderColor = color;
   }
 
-  // আপনার কাস্টম অডিও লিংক
+  // ৩. অডিও অ্যালার্ট
   const directAudioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
   const customAudio = new Audio(directAudioUrl);
 
-  function playAlertSound() {
-    customAudio.currentTime = 0;
-    const playPromise = customAudio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          function beep(freq, delay, dur) {
-            setTimeout(() => {
-              try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = "square";
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + dur);
-              } catch (e) {}
-            }, delay);
-          }
-          for (let i = 0; i < 5; i++) {
-            beep(950, i * 250, 0.18);
-          }
-        } catch (e) {}
-      });
+  function triggerAudio() {
+    try {
+      customAudio.currentTime = 0;
+      const playPromise = customAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          fallbackBeep();
+        });
+      }
+    } catch (e) {
+      fallbackBeep();
     }
   }
 
-  // স্মুথ এবং স্বাভাবিক ক্লিক ফাংশন
-  function triggerSmoothClick(target) {
-    if (!target) return;
+  function fallbackBeep() {
     try {
-      const rect = target.getBoundingClientRect();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(audioআপনার সমস্যাটি এবং প্ল্যাটফর্মের আচরণটি সম্পূর্ণ বোধগম্য। 
+
+এখানে দুটি মূল সমস্যা হচ্ছে:
+১. **ইউআই (UI) স্বয়ংক্রিয়ভাবে স্ক্রিন থেকে না সরা:** অর্ডার সফল হলে স্ক্রিপ্টটি যে টেক্সটগুলো দিয়ে ডিটেক্ট করছিল, পেজের ফ্রেমওয়ার্ক বা DOM আপডেটের কারণে সেগুলো হয়তো তাত্ক্ষণিক ধরা পড়ছে না, অথবা এলিমেন্ট রিমুভ করার কমান্ডটি ব্লক হচ্ছিল।
+২. **অপারেশন স্মুথ না হওয়া ও "Frequent operation":** সার্ভার যাতে একে স্প্যাম বা অতিরিক্ত অটোমেশন না ভাবে, সেজন্য স্ক্রিপ্টকে মানুষের স্বাভাবিক ব্যবহারের মতো আচরণ করতে হবে। 
+
+নিচে সম্পূর্ণ অপ্টিমাইজড কোডটি দেওয়া হলো, যাতে নিচের পরিবর্তনগুলো আনা হয়েছে:
+* **অর্ডার কনফার্ম হলেই সাথে সাথে ইউআই গায়েব:** পেজে পেমেন্ট সংক্রান্ত যেকোনো নিশ্চিত মার্কার (যেমন: `Matched`, `Pay ₹`, `Pending payment`, বা কাউন্টডাউন) দেখা মাত্রই প্যানেলটি সঙ্গে সঙ্গে সম্পূর্ণ রিমুভ হয়ে যাবে এবং মিউজিক বেজে উঠবে।
+* **স্মুথ এবং নিরাপদ ক্লিক (Human-like Timing):** ২০/২০ হয়ে `No match found` আসার পর সার্ভারের সেশন রিলিজ হতে ১.২ সেকেন্ড অপেক্ষা করে স্বাভাবিক একটি ক্লিক করবে, ফলে `Frequent operation` মেসেজ আসবে না।
+
+```javascript
+(function () {
+  // পূর্ববর্তী প্যানেল সম্পূর্ণ পরিষ্কার
+  const existingPanel = document.getElementById("cyberMatchPanel");
+  if (existingPanel) existingPanel.remove();
+  const existingCSS = document.getElementById("cyberMatchCSS");
+  if (existingCSS) existingCSS.remove();
+
+  // ১. কমপ্যাক্ট সাইবারপাঙ্ক স্টাইল
+  const style = document.createElement("style");
+  style.id = "cyberMatchCSS";
+  style.innerHTML = `
+    #cyberMatchPanel {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      width: 195px;
+      z-index: 9999999;
+      background: linear-gradient(180deg, #181b24 0%, #0d0f15 100%);
+      border-radius: 10px;
+      border: 1px solid #363c4e;
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2), 0 8px 20px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    .cmp-header {
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: move;
+      touch-action: none;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .cmp-title {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      color: #00f2fe;
+      text-transform: uppercase;
+    }
+    .cmp-body {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cmp-btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+    .cmp-btn {
+      height: 26px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cmp-btn-start {
+      background: #1b4b3e;
+      color: #38ef7d;
+      border-color: #38ef7d;
+    }
+    .cmp-btn-stop {
+      background: #501d24;
+      color: #ff4e50;
+      border-color: #ff4e50;
+    }
+    .cmp-status-box {
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 5px;
+      padding: 4px;
+      text-align: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #4facfe;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // ২. প্যানেল এইচটিএমএল
+  const panel = document.createElement("div");
+  panel.id = "cyberMatchPanel";
+  panel.innerHTML = `
+    <div class="cmp-header" id="cmpHeader">
+      <div class="cmp-title">⚡ AUTO MATCH</div>
+      <div style="font-size: 10px; color: #777; cursor: pointer;" id="cmpClose">✕</div>
+    </div>
+    <div class="cmp-body">
+      <div class="cmp-btn-row">
+        <button class="cmp-btn cmp-btn-start" id="cmpStart">Start</button>
+        <button class="cmp-btn cmp-btn-stop" id="cmpStop">Stop</button>
+      </div>
+      <div class="cmp-status-box" id="cmpStatus">Status: Ready</div>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  const startBtn = document.getElementById("cmpStart");
+  const stopBtn = document.getElementById("cmpStop");
+  const statusEl = document.getElementById("cmpStatus");
+  const closeBtn = document.getElementById("cmpClose");
+
+  let isRunning = false;
+  let monitorInterval = null;
+  let isClickCoolingDown = false;
+
+  function setStatus(text, color = "#4facfe") {
+    if (!statusEl) return;
+    statusEl.innerText = "Status: " + text;
+    statusEl.style.color = color;
+    statusEl.style.borderColor = color;
+  }
+
+  // কাস্টম অডিও লিংক
+  const audioUrl = "[https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3](https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3)";
+  const customAudio = new Audio(audioUrl);
+
+  function triggerAlarm() {
+    customAudio.currentTime = 0;
+    customAudio.play().catch(() => {
+      // ব্যাকআপ ওয়েব অডিও সিন্থেসাইজার
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 4; i++) {
+          setTimeout(() => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+          }, i * 250);
+        }
+      } catch (e) {}
+    });
+  }
+
+  // মানবসদৃশ মসৃণ ক্লিক ফাংশন
+  function performClick(element) {
+    if (!element) return;
+    try {
+      const rect = element.getBoundingClientRect();
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
-
-      const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
-      target.dispatchEvent(new MouseEvent("mousedown", opts));
-      target.dispatchEvent(new MouseEvent("mouseup", opts));
-      target.dispatchEvent(new MouseEvent("click", opts));
-      if (typeof target.click === "function") {
-        target.click();
+      const eventOpts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
+      element.dispatchEvent(new MouseEvent("mousedown", eventOpts));
+      element.dispatchEvent(new MouseEvent("mouseup", eventOpts));
+      element.dispatchEvent(new MouseEvent("click", eventOpts));
+      if (typeof element.click === "function") {
+        element.click();
       }
     } catch (e) {}
   }
@@ -183,75 +336,77 @@
     monitorInterval = setInterval(() => {
       if (!isRunning) return;
 
+      const pageText = document.body ? document.body.innerText : "";
       const currentUrl = window.location.href;
-      const bodyText = document.body ? document.body.innerText : "";
 
-      // ১. অর্ডার পাওয়া মাত্র সাথে সাথে স্টপ, গান প্লে এবং UI রিমুভ
-      const hasOrderMatched = 
-        bodyText.includes("Matched, pending payment") || 
-        bodyText.includes("We have matched the best order") ||
-        bodyText.includes("Redirecting to the payment page") ||
-        bodyText.includes("Cancel Order") ||
-        bodyText.includes("Pay ₹") || 
-        bodyText.includes("Time left to pay") ||
+      // ১. অর্ডার কনফার্ম হওয়ার সমস্ত মার্কার চেক
+      const isOrderConfirmed = 
+        pageText.includes("Matched, pending payment") || 
+        pageText.includes("pending payment") ||
+        pageText.includes("Redirecting to the payment page") ||
+        pageText.includes("Cancel Order") ||
+        pageText.includes("Time left to pay") ||
+        pageText.includes("Pay ₹") ||
         currentUrl.includes("cashier");
 
-      if (hasOrderMatched && !bodyText.includes("Searching available orders") && !bodyText.includes("No match found")) {
+      // অর্ডার পাওয়া গেলে তাত্ক্ষণিক স্টপ, অ্যালার্ম এবং UI তাৎক্ষণিক মুছে ফেলা
+      if (isOrderConfirmed && !pageText.includes("Searching available orders") && !pageText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
-        playAlertSound();
-        panel.style.opacity = "0";
-        panel.style.transform = "scale(0.85)";
-        setTimeout(() => {
+        triggerAlarm();
+        
+        // ইউআই সরাসরি স্ক্রিন থেকে সরিয়ে ফেলা
+        if (panel) {
           panel.remove();
-        }, 300);
+        }
         return;
       }
 
-      // যদি বর্তমানে ক্লিক করার বিরতিতে থাকে তবে অপেক্ষা করবে
-      if (isActionPending) return;
+      // কুলডাউনে থাকলে অপেক্ষা করবে
+      if (isClickCoolingDown) return;
 
-      // ২. 'No match found' পেজ সম্পূর্ণ এসেছে কি না তা নিশ্চিত হওয়া
-      const hasNoMatch = bodyText.includes("No match found") || bodyText.includes("after multiple attempts");
+      // ২. 'No match found' পেজ সম্পূর্ণ নিশ্চিত করা
+      const isNoMatchPage = pageText.includes("No match found") || pageText.includes("after multiple attempts");
 
-      if (hasNoMatch) {
-        const allElements = Array.from(document.querySelectorAll("button, div, span, a"));
-        const matchBtn = allElements.find(el => {
-          const text = (el.textContent || "").trim();
-          return text === "Match Again" && el.offsetParent !== null && !el.closest("#cyberMatchPanel");
+      if (isNoMatchPage) {
+        const elements = Array.from(document.querySelectorAll("button, div, span, a"));
+        const matchButton = elements.find(el => {
+          const txt = (el.textContent || "").trim();
+          return txt === "Match Again" && el.offsetParent !== null && !el.closest("#cyberMatchPanel");
         });
 
-        if (matchBtn) {
-          isActionPending = true;
-          setStatus("Waiting 1.5s...", "#ffbb00");
+        if (matchButton) {
+          isClickCoolingDown = true;
+          setStatus("Waiting 1.2s...", "#ffbb00");
 
-          // সার্ভারের সেশন স্টেবল হওয়ার জন্য ১.৫ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
+          // ১.২ সেকেন্ড পর স্মুথভাবে একবার ক্লিক
           setTimeout(() => {
             if (!isRunning) return;
-            setStatus("Matching...", "#38ef7d");
-            triggerSmoothClick(matchBtn);
+            setStatus("Retrying...", "#38ef7d");
+            performClick(matchButton);
 
-            // ক্লিক করার পর পরবর্তী ৪ সেকেন্ড কোনো ক্লিক হবে না
+            // ৩.৫ সেকেন্ডের জন্য ক্লিক লক যাতে 'Frequent operation' না আসে
             setTimeout(() => {
-              isActionPending = false;
+              isClickCoolingDown = false;
               if (isRunning) setStatus("Scanning...", "#00f2fe");
-            }, 4000);
-          }, 1500);
+            }, 3500);
+          }, 1200);
           return;
         }
       }
 
-      // স্বাভাবিক সার্চ চলার সময়
-      if (bodyText.includes("Searching available orders") || bodyText.includes("Matching")) {
+      // সাধারণ স্ক্যানিং স্ট্যাটাস
+      if (pageText.includes("Searching available orders") || pageText.includes("Matching")) {
         setStatus("Searching...", "#00f2fe");
       }
-    }, 500);
+    }, 300);
   }
 
+  // বাটন ক্লিক ইভেন্ট
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
-    isActionPending = false;
+    isClickCoolingDown = false;
     try {
       customAudio.load();
     } catch (e) {}
@@ -261,7 +416,7 @@
 
   stopBtn.onclick = () => {
     isRunning = false;
-    isActionPending = false;
+    isClickCoolingDown = false;
     if (monitorInterval) clearInterval(monitorInterval);
     setStatus("Stopped", "#ff4e50");
   };
@@ -289,8 +444,8 @@
       if (!isDragging) return;
       const x = e.touches ? e.touches[0].clientX : e.clientX;
       const y = e.touches ? e.touches[0].clientY : e.clientY;
-      panel.style.left = `${Math.max(5, Math.min(window.innerWidth - 220, x - startX))}px`;
-      panel.style.top = `${Math.max(5, Math.min(window.innerHeight - 120, y - startY))}px`;
+      panel.style.left = `${Math.max(5, Math.min(window.innerWidth - 205, x - startX))}px`;
+      panel.style.top = `${Math.max(5, Math.min(window.innerHeight - 100, y - startY))}px`;
       panel.style.right = "auto";
       panel.style.bottom = "auto";
     }
@@ -304,4 +459,4 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
-    
+  
