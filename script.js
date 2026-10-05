@@ -115,6 +115,7 @@
 
   let isRunning = false;
   let monitorInterval = null;
+  let isCooldown = false; // অতিরিক্ত ক্লিক থামানোর জন্য কুলডাউন লক
 
   function setStatus(text, color = "#4facfe") {
     if (!statusEl) return;
@@ -157,16 +158,22 @@
     }
   }
 
-  function forceClick(target) {
+  // নিরাপদ সিঙ্গেল ক্লিক ফাংশন
+  function safeClick(target) {
     if (!target) return;
-    const events = ["touchstart", "touchend", "mousedown", "mouseup", "click"];
-    events.forEach(evtType => {
-      try {
-        const evt = new MouseEvent(evtType, { bubbles: true, cancelable: true, view: window });
-        target.dispatchEvent(evt);
-      } catch (e) {}
-    });
-    if (typeof target.click === "function") target.click();
+    try {
+      const rect = target.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+
+      const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
+      target.dispatchEvent(new MouseEvent("mousedown", opts));
+      target.dispatchEvent(new MouseEvent("mouseup", opts));
+      target.dispatchEvent(new MouseEvent("click", opts));
+      if (typeof target.click === "function") {
+        target.click();
+      }
+    } catch (e) {}
   }
 
   function startMonitoring() {
@@ -178,6 +185,7 @@
       const currentUrl = window.location.href;
       const bodyText = document.body ? document.body.innerText : "";
 
+      // অর্ডার পাওয়ার নিশ্চিত চেক
       const hasOrderMatched = 
         bodyText.includes("Matched, pending payment") || 
         bodyText.includes("We have matched the best order") ||
@@ -187,7 +195,7 @@
         bodyText.includes("Time left to pay") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার পাওয়ার সাথে সাথে গান বাজবে এবং ইউআই স্ক্রিন থেকে রিমুভ হয়ে যাবে
+      // অর্ডার ধরে ফেললে তাত্ক্ষণিক স্টপ, অ্যালার্ম এবং UI স্বয়ংক্রিয় রিমুভ
       if (hasOrderMatched && !bodyText.includes("Searching available orders") && !bodyText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
@@ -200,25 +208,36 @@
         return;
       }
 
-      const allElements = Array.from(document.querySelectorAll("div, button, span, p, a"));
+      // যদি কুলডাউনে থাকে তবে নতুন করে বাটন খুঁজবে বা চাপবে না
+      if (isCooldown) return;
+
+      // "Match Again" বাটন খোঁজা
+      const allElements = Array.from(document.querySelectorAll("button, div, span, a"));
       const matchBtn = allElements.find(el => {
         const text = (el.textContent || "").trim();
         return text === "Match Again" && el.offsetParent !== null && !el.closest("#cyberMatchPanel");
       });
 
       if (matchBtn) {
+        isCooldown = true; // ক্লিক লক অন
         setStatus("Clicking...", "#ffbb00");
-        forceClick(matchBtn);
-        if (matchBtn.parentElement) forceClick(matchBtn.parentElement);
+        safeClick(matchBtn);
+
+        // ২.৫ সেকেন্ডের জন্য বিরতি, যাতে "Frequent operation" না ঘটে
+        setTimeout(() => {
+          isCooldown = false;
+          if (isRunning) setStatus("Scanning...", "#00f2fe");
+        }, 2500);
       } else {
         setStatus("Scanning...", "#00f2fe");
       }
-    }, 200);
+    }, 450); // নিরাপদ ও রিল্যাক্সড স্ক্যান ইন্টারভ্যাল
   }
 
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
+    isCooldown = false;
     try {
       customAudio.load();
     } catch (e) {}
@@ -228,6 +247,7 @@
 
   stopBtn.onclick = () => {
     isRunning = false;
+    isCooldown = false;
     if (monitorInterval) clearInterval(monitorInterval);
     setStatus("Stopped", "#ff4e50");
   };
@@ -238,6 +258,7 @@
     panel.remove();
   };
 
+  // ড্র্যাগিং হ্যান্ডলার
   (function initDrag() {
     const header = document.getElementById("cmpHeader");
     let isDragging = false;
