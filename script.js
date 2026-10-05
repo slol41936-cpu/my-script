@@ -1,11 +1,65 @@
-(function () {
+(async function () {
+  console.log("Validating license with Firebase...");
+
+  // ১. ফায়ারবেস SDK ডাইনামিক লোড
+  if (!window.firebase) {
+    await new Promise((resolve) => {
+      const scriptApp = document.createElement("script");
+      scriptApp.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js";
+      scriptApp.onload = () => {
+        const scriptDb = document.createElement("script");
+        scriptDb.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js";
+        scriptDb.onload = resolve;
+        document.head.appendChild(scriptDb);
+      };
+      document.head.appendChild(scriptApp);
+    });
+  }
+
+  // ২. আপনার ফায়ারবেস কনফিগ
+  const firebaseConfig = {
+    apiKey: "AIzaSyByR2NzGNdIPU0994a7dL9E3X6MM3rV1AE",
+    authDomain: "my-ar-automation.firebaseapp.com",
+    projectId: "my-ar-automation",
+    storageBucket: "my-ar-automation.firebasestorage.app",
+    messagingSenderId: "443374813761",
+    appId: "1:443374813761:web:3f5142f684c6fe26123cc0"
+  };
+
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+  } catch (e) {}
+
+  const db = firebase.firestore();
+
+  // ৩. ফায়ারবেস থেকে পারমিশন যাচাই
+  let isAuthorized = false;
+  try {
+    const docRef = await db.collection("access").doc("status").get();
+    if (docRef.exists && docRef.data().status === "active") {
+      isAuthorized = true;
+    }
+  } catch (err) {
+    console.error("Auth check failed:", err);
+  }
+
+  // অনুমতি না থাকলে কোড বন্ধ হয়ে যাবে
+  if (!isAuthorized) {
+    alert("❌ Access Denied! You do not have permission to run this tool.");
+    return;
+  }
+
+  console.log("✅ Access Granted! Launching Auto Matcher...");
+
   // পূর্ববর্তী প্যানেল ও স্টাইল ক্লিনআপ
   const prevPanel = document.getElementById("cyberMatchPanel");
   if (prevPanel) prevPanel.remove();
   const prevCSS = document.getElementById("cyberMatchCSS");
   if (prevCSS) prevCSS.remove();
 
-  // ১. অফ-হোয়াইট লাইট থিম সিএসএস
+  // ৪. অফ-হোয়াইট থিম সিএসএস
   const style = document.createElement("style");
   style.id = "cyberMatchCSS";
   style.innerHTML = `
@@ -100,7 +154,7 @@
   `;
   document.head.appendChild(style);
 
-  // ২. প্যানেল এইচটিএমএল
+  // ৫. প্যানেল এইচটিএমএল
   const panel = document.createElement("div");
   panel.id = "cyberMatchPanel";
   panel.innerHTML = `
@@ -134,7 +188,7 @@
     statusEl.style.borderColor = color;
   }
 
-  // ৩. অডিও অ্যালার্ট ইঞ্জিন
+  // অডিও অ্যালার্ট
   const audioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
   const customAudio = new Audio(audioUrl);
 
@@ -172,7 +226,6 @@
     } catch (e) {}
   }
 
-  // ৪. খাঁটি সিঙ্গেল ক্লিক (ডাবল রিকোয়েস্ট প্রতিরোধক)
   function singleHumanClick(target) {
     if (!target) return;
     try {
@@ -185,7 +238,6 @@
     } catch (e) {}
   }
 
-  // ৫. স্ক্যানিং ইঞ্জিন
   function startMonitoring() {
     if (monitorInterval) clearInterval(monitorInterval);
 
@@ -195,7 +247,6 @@
       const pageText = document.body ? document.body.innerText : "";
       const currentUrl = window.location.href;
 
-      // ক. অর্ডার ধরার সমস্ত নিশ্চিত মার্কার চেক
       const isOrderConfirmed = 
         pageText.includes("Matched, pending payment") || 
         pageText.includes("pending payment") ||
@@ -205,7 +256,6 @@
         pageText.includes("Pay ₹") ||
         currentUrl.includes("cashier");
 
-      // অর্ডার পাওয়া মাত্র সাথে সাথে স্টপ, সাউন্ড প্লে এবং UI রিমুভ
       if (isOrderConfirmed && !pageText.includes("Searching available orders") && !pageText.includes("No match found")) {
         isRunning = false;
         clearInterval(monitorInterval);
@@ -216,10 +266,8 @@
         return;
       }
 
-      // যদি অলরেডি অ্যাকশন প্রসেসিং বা বিরতিতে থাকে তবে অপেক্ষা করবে
       if (isActionLocked) return;
 
-      // খ. 'No match found' পেজ সম্পূর্ণ এসেছে কি না
       const isNoMatchPage = pageText.includes("No match found") || pageText.includes("after multiple attempts");
 
       if (isNoMatchPage) {
@@ -233,13 +281,11 @@
           isActionLocked = true;
           setStatus("Waiting 2s...", "#d97706");
 
-          // সার্ভার শান্ত হওয়ার জন্য পুরো ২ সেকেন্ড বিরতি দিয়ে একবার ক্লিক
           setTimeout(() => {
             if (!isRunning) return;
             setStatus("Retrying...", "#0f8b44");
             singleHumanClick(matchButton);
 
-            // নতুন স্ক্যানিং শুরু না হওয়া পর্যন্ত ৪ সেকেন্ড ক্লিক লক থাকবে
             setTimeout(() => {
               isActionLocked = false;
               if (isRunning) setStatus("Scanning...", "#2563eb");
@@ -249,14 +295,12 @@
         }
       }
 
-      // স্বাভাবিক সার্চিং স্ট্যাটাস
       if (pageText.includes("Searching available orders") || pageText.includes("Matching")) {
         setStatus("Searching...", "#2563eb");
       }
     }, 400);
   }
 
-  // বাটন ইভেন্ট
   startBtn.onclick = () => {
     if (isRunning) return;
     isRunning = true;
@@ -281,7 +325,7 @@
     panel.remove();
   };
 
-  // ড্র্যাগিং সাপোর্ট
+  // ড্র্যাগিং
   (function initDrag() {
     const header = document.getElementById("cmpHeader");
     let isDragging = false;
@@ -313,4 +357,4 @@
     document.addEventListener("touchend", onEnd);
   })();
 })();
-              
+          
