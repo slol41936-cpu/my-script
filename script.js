@@ -7,6 +7,15 @@
   const style = document.createElement("style");
   style.id = "cyberMatchCSS";
   style.innerHTML = `
+    @keyframes cmpPulse {
+      0% { box-shadow: 0 0 4px #10b981; transform: scale(1); }
+      50% { box-shadow: 0 0 14px #10b981; transform: scale(1.02); }
+      100% { box-shadow: 0 0 4px #10b981; transform: scale(1); }
+    }
+    @keyframes cmpBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
     #cyberMatchPanel {
       position: fixed;
       right: 12px;
@@ -51,8 +60,8 @@
       gap: 6px;
     }
     .cmp-btn {
-      height: 26px;
-      border-radius: 5px;
+      height: 28px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 10px;
       font-weight: 700;
@@ -61,28 +70,53 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.2s ease;
     }
     .cmp-btn-start {
       background: #059669;
       color: #ffffff;
       border-color: #10b981;
     }
+    .cmp-btn-start.is-active {
+      background: #10b981 !important;
+      border-color: #34d399 !important;
+      animation: cmpPulse 1.4s infinite ease-in-out;
+      font-weight: 800;
+    }
     .cmp-btn-stop {
       background: #dc2626;
       color: #ffffff;
       border-color: #ef4444;
     }
+    .cmp-btn-stop:active {
+      filter: brightness(0.85);
+    }
     .cmp-status-box {
       border: 1px solid #334155;
       background: #1e293b;
       border-radius: 5px;
-      padding: 4px;
+      padding: 5px;
       text-align: center;
       font-size: 9px;
       font-weight: 700;
       color: #38bdf8;
       text-transform: uppercase;
       letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .cmp-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #94a3b8;
+      display: inline-block;
+    }
+    .cmp-dot.active {
+      background: #10b981;
+      animation: cmpBlink 1s infinite ease-in-out;
     }
   `;
   document.head.appendChild(style);
@@ -96,10 +130,13 @@
     </div>
     <div class="cmp-body">
       <div class="cmp-btn-row">
-        <button class="cmp-btn cmp-btn-start" id="cmpStart">Start</button>
-        <button class="cmp-btn cmp-btn-stop" id="cmpStop">Stop</button>
+        <button class="cmp-btn cmp-btn-start" id="cmpStart">▶ Start</button>
+        <button class="cmp-btn cmp-btn-stop" id="cmpStop">■ Stop</button>
       </div>
-      <div class="cmp-status-box" id="cmpStatus">Status: Ready</div>
+      <div class="cmp-status-box" id="cmpStatusBox">
+        <span class="cmp-dot" id="cmpDot"></span>
+        <span id="cmpStatus">Status: Ready</span>
+      </div>
     </div>
   `;
   document.body.appendChild(panel);
@@ -107,6 +144,8 @@
   const startBtn = document.getElementById("cmpStart");
   const stopBtn = document.getElementById("cmpStop");
   const statusEl = document.getElementById("cmpStatus");
+  const statusBox = document.getElementById("cmpStatusBox");
+  const dotEl = document.getElementById("cmpDot");
   const closeBtn = document.getElementById("cmpClose");
 
   let isRunning = false;
@@ -115,9 +154,9 @@
 
   function setStatus(text, color = "#38bdf8") {
     if (!statusEl) return;
-    statusEl.innerText = "Status: " + text;
+    statusEl.innerText = text;
     statusEl.style.color = color;
-    statusEl.style.borderColor = color;
+    statusBox.style.borderColor = color;
   }
 
   const audioUrl = "https://github.com/slol41936-cpu/my-script/raw/refs/heads/main/Fahhh-%20sound%20effect%20(HD)%20-%20HighQualitySFX%20(2).mp3";
@@ -236,18 +275,31 @@
     if (isRunning) return;
     isRunning = true;
     isActionLocked = false;
+    
+    // ভিজ্যুয়াল অ্যাক্টিভেশন
+    startBtn.classList.add("is-active");
+    startBtn.innerText = "● RUNNING";
+    dotEl.classList.add("active");
+    
     try {
       customAudio.load();
     } catch (e) {}
-    setStatus("Scanning...", "#38bdf8");
+    
+    setStatus("Scanning...", "#10b981");
     startMonitoring();
   };
 
   stopBtn.onclick = () => {
     isRunning = false;
     isActionLocked = false;
+    
+    // ভিজ্যুয়াল রিসেট
+    startBtn.classList.remove("is-active");
+    startBtn.innerText = "▶ Start";
+    dotEl.classList.remove("active");
+    
     if (monitorInterval) clearInterval(monitorInterval);
-    setStatus("Stopped", "#ef4444");
+    setStatus("Status: Stopped", "#ef4444");
   };
 
   closeBtn.onclick = () => {
