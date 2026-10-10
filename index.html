@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Happy Birthday To You! 🎂</title>
+  <title>A Special Surprise For You! 🎁</title>
   <style>
     * {
       box-sizing: border-box;
@@ -12,178 +12,222 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     body {
-      background: radial-gradient(circle at top, #2b1055, #7597de);
+      background: radial-gradient(circle at center, #1b0c36, #090214);
       color: #fff;
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 20px 10px;
+      padding: 20px 15px;
       overflow-x: hidden;
+      perspective: 1000px;
     }
-    .container {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
+
+    /* স্ক্রিন কার্ডের ফ্রেম */
+    .screen {
+      display: none;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 25px;
-      padding: 30px 20px;
-      max-width: 520px;
+      padding: 35px 25px;
+      max-width: 450px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-      position: relative;
-      z-index: 5;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      animation: fadeIn 0.8s ease forwards;
     }
-    .badge {
-      display: inline-block;
-      background: #ff4081;
-      padding: 6px 18px;
-      border-radius: 50px;
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      animation: pulse 1.8s infinite;
+    .screen.active {
+      display: block;
     }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: scale(0.9) translateY(20px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
     }
+
+    /* স্টাইলিশ হেডলাইন ও লেখা */
     h1 {
-      font-size: 28px;
-      margin-bottom: 15px;
-      color: #fff;
-      text-shadow: 0 0 15px rgba(255, 105, 180, 0.8);
+      font-size: 26px;
+      margin-bottom: 12px;
+      color: #ff6097;
+      text-shadow: 0 0 10px rgba(255, 96, 151, 0.6);
     }
-    .profile-wrap {
-      width: 140px;
-      height: 140px;
-      margin: 0 auto 15px;
-      border-radius: 50%;
-      border: 4px solid #ff4081;
-      overflow: hidden;
-      box-shadow: 0 0 25px rgba(255, 64, 129, 0.6);
-      animation: floatImg 3s ease-in-out infinite;
-    }
-    @keyframes floatImg {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    .profile-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    .message {
-      font-size: 15px;
-      line-height: 1.7;
-      color: #f1f1f1;
+    p {
+      color: #e0e0e0;
+      font-size: 16px;
+      line-height: 1.6;
       margin-bottom: 25px;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 15px;
-      border-radius: 12px;
     }
-    /* ছবি গ্যালারি */
-    .section-title {
-      font-size: 18px;
-      margin: 20px 0 12px;
-      color: #ffe600;
+
+    /* বাটন */
+    .next-btn {
+      background: linear-gradient(45deg, #ff4081, #e91e63);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(233, 30, 99, 0.5);
+      transition: transform 0.2s;
+    }
+    .next-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* স্টেপ ১: গিফট বক্স */
+    .gift-box {
+      font-size: 90px;
+      margin: 20px 0;
+      cursor: pointer;
+      display: inline-block;
+      animation: shake 2.5s infinite;
+      user-select: none;
+    }
+    @keyframes shake {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      10%, 30% { transform: rotate(-8deg) scale(1.05); }
+      20%, 40% { transform: rotate(8deg) scale(1.05); }
+      50% { transform: rotate(0deg) scale(1); }
+    }
+    .hint-tap {
+      font-size: 14px;
+      color: #ffd54f;
+      letter-spacing: 0.5px;
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* স্টেপ ২: কেক ও ক্যান্ডেল */
+    .cake-container {
+      margin: 25px 0;
+      cursor: pointer;
+      display: inline-block;
+      position: relative;
+    }
+    .cake-emoji {
+      font-size: 85px;
+      filter: drop-shadow(0 0 15px rgba(255, 235, 59, 0.4));
+    }
+    .candle-flame {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 26px;
+      animation: flameWobble 0.6s infinite alternate;
+    }
+    @keyframes flameWobble {
+      0% { transform: translateX(-50%) rotate(-4deg) scale(1); }
+      100% { transform: translateX(-50%) rotate(4deg) scale(1.15); }
+    }
+
+    /* স্টেপ ৩: মেসেজ চিঠি */
+    .letter-box {
+      background: rgba(255, 255, 255, 0.12);
+      border-left: 4px solid #ff4081;
+      padding: 18px;
+      border-radius: 10px;
       text-align: left;
+      font-style: italic;
+      color: #fff;
+      margin-bottom: 25px;
     }
+
+    /* স্টেপ ৪: ফটো ও ভিডিও মেমোরি */
     .gallery {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
-      margin-bottom: 20px;
+      margin: 15px 0 20px;
     }
     .gallery img {
       width: 100%;
-      height: 120px;
+      height: 115px;
       object-fit: cover;
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      transition: transform 0.3s;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    .gallery img:hover {
-      transform: scale(1.04);
-    }
-    /* ভিডিও সেকশন */
-    .video-container {
+    .video-wrap {
       position: relative;
       padding-bottom: 56.25%;
       height: 0;
+      border-radius: 14px;
       overflow: hidden;
-      border-radius: 15px;
-      margin-bottom: 25px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 20px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
     }
-    .video-container iframe, .video-container video {
+    .video-wrap iframe {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       border: 0;
-      border-radius: 15px;
     }
-    /* বাটন ও কন্ট্রোল */
-    .action-btn {
-      background: linear-gradient(45deg, #ff4081, #ff9100);
-      color: #fff;
-      border: none;
-      padding: 12px 26px;
-      font-size: 16px;
-      font-weight: bold;
-      border-radius: 50px;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(255, 64, 129, 0.4);
-      margin: 6px;
-      transition: transform 0.2s;
-    }
-    .action-btn:active {
-      transform: scale(0.96);
-    }
-    /* ফ্লোটিং এফেক্ট */
+
+    /* আকাশে ওড়া হার্ট বা পার্টিকেল */
     .floating-item {
       position: fixed;
       bottom: -30px;
       font-size: 24px;
-      z-index: 1;
       pointer-events: none;
-      animation: rise 5s linear forwards;
+      z-index: 9999;
+      animation: rise 4.5s linear forwards;
     }
     @keyframes rise {
-      0% { transform: translateY(0) scale(0.8); opacity: 1; }
-      100% { transform: translateY(-110vh) scale(1.4); opacity: 0; }
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ব্যাকগ্রাউন্ড মিউজিক (লোকাল বা অনলাইন লিঙ্ক দিতে পারেন) -->
+  <!-- রোমান্টিক/বার্থডে ব্যাকগ্রাউন্ড মিউজিক -->
   <audio id="bgMusic" loop src="https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=happy-birthday-155461.mp3"></audio>
 
-  <div class="container">
-    <div class="badge">Happy Birthday! 🎈</div>
+  <!-- ধাপ ১: সারপ্রাইজ আনলক (গিফট বক্স) -->
+  <div class="screen active" id="step1">
+    <div class="gift-box" onclick="unlockSurprise()">🎁</div>
+    <h1>তোমার জন্য কিছু একটা অপেক্ষা করছে! ✨</h1>
+    <p class="hint-tap">👉 গিফট বক্সটিতে স্পর্শ বা সোয়াইপ করো 👈</p>
+  </div>
 
-    <!-- বন্ধুর প্রধান ছবি -->
-    <div class="profile-wrap">
-      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80" alt="Friend Profile" id="mainPhoto">
+  <!-- ধাপ ২: জন্মদিনের কেক ও মোমবাতি নিভানো -->
+  <div class="screen" id="step2">
+    <h1>শুভ জন্মদিন, [বন্ধুর নাম]! 🎂</h1>
+    <p>মোমবাতিতে ফুঁ দাও অথবা কেকটির ওপর ট্যাপ করে কাটুন!</p>
+    
+    <div class="cake-container" onclick="cutCake()">
+      <div class="candle-flame" id="flame">🔥</div>
+      <div class="cake-emoji">🎂</div>
     </div>
+    <div id="cakeStatus" style="font-size: 15px; color: #ffd54f; margin-bottom: 15px;">কেক স্পর্শ করো ✂️</div>
+    <button class="next-btn" id="cakeNextBtn" style="display: none;" onclick="goToStep(3)">পরের সারপ্রাইজটি দেখো 👉</button>
+  </div>
 
-    <!-- বন্ধুর নাম -->
-    <h1>শুভ জন্মদিন, [বন্ধুর নাম]! 🎂✨</h1>
-
-    <!-- আন্তরিক শুভেচ্ছা বার্তা -->
-    <div class="message">
-      আজকের দিনটি শুধুই তোমার জন্য স্পেশাল! তোমার জীবনের আগামী দিনগুলো স্বপ্ন, ভালোবাসা ও অন্তহীন হাসিখুশিতে ভরে উঠুক। সর্বদা এভাবেই সাথে থেকো!
+  <!-- ধাপ ৩: ভালোবাসার গোপন চিঠি ও উইশ -->
+  <div class="screen" id="step3">
+    <h1>আমার মনের কিছু কথা 💌</h1>
+    <div class="letter-box">
+      "প্রিয় [বন্ধুর নাম],<br><br>
+      আজকের এই শুভ দিনে তোমায় জানাই একরাশ ভালোবাসা ও শুভকামনা। তুই আমার জীবনে একজন অন্যতম সেরা বন্ধু। তোর সাথে কাটানো প্রতিটি আড্ডা আর স্মৃতি সত্যিই অমূল্য। জীবনের প্রতিটি পরীক্ষায় তুই সফল হ, তোর সব স্বপ্ন সত্যি হোক। আজকের দিনটা দারুণভাবে উপভোগ করিস!"
     </div>
+    <button class="next-btn" onclick="goToStep(4)">আমাদের প্রিয় মুহূর্তগুলো দেখো 📸</button>
+  </div>
 
-    <!-- ছবির স্মৃতি গ্যালারি -->
-    <div class="section-title">📸 আমাদের সুন্দর মুহূর্তগুলো:</div>
+  <!-- ধাপ ৪: ছবির গ্যালারি ও ভিডিও -->
+  <div class="screen" id="step4">
+    <h1>আমাদের সুন্দর কিছু স্মৃতি 💖</h1>
+    <p>স্মৃতির পাতায় জমে থাকা মিষ্টি কিছু মুহূর্ত...</p>
+
+    <!-- ছবির গ্যালারি -->
     <div class="gallery">
       <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80" alt="Memory 1">
       <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=400&q=80" alt="Memory 2">
@@ -191,57 +235,59 @@
       <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80" alt="Memory 4">
     </div>
 
-    <!-- ইউটিউব ভিডিও বা স্পেশাল ভিডিও মেমোরি -->
-    <div class="section-title">🎬 একটি বিশেষ উপহার:</div>
-    <div class="video-container">
-      <!-- YouTube ভিডিওর embed লিঙ্ক বসান -->
-      <iframe src="https://www.youtube.com/embed/nl62hhiBMOM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <!-- স্পেশাল ভিডিও -->
+    <div class="video-wrap">
+      <iframe src="https://www.youtube.com/embed/nl62hhiBMOM" allowfullscreen></iframe>
     </div>
 
-    <!-- মিউজিক ও সেলিব্রেশন বাটন -->
-    <div>
-      <button class="action-btn" onclick="toggleMusic()">🎵 গান চালু / বন্ধ</button>
-      <button class="action-btn" onclick="blastLove()">💖 ভালোবাসা পাঠাও!</button>
-    </div>
+    <button class="next-btn" onclick="blastLove()">আকাশে ভালোবাসা ওড়াও 🎈</button>
   </div>
 
   <script>
     const music = document.getElementById('bgMusic');
-    let isPlaying = false;
 
-    function toggleMusic() {
-      if (isPlaying) {
-        music.pause();
-        isPlaying = false;
-      } else {
-        music.play();
-        isPlaying = true;
-      }
+    function goToStep(stepNumber) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('step' + stepNumber).classList.add('active');
     }
 
-    const icons = ['🎈', '💖', '🎂', '🎉', '✨', '💐', '🥳'];
+    // স্টেপ ১ আনলক
+    function unlockSurprise() {
+      // ব্যাকগ্রাউন্ড মিউজিক শুরু
+      music.play().catch(e => console.log('Audio autoplay prevented'));
+      blastLove();
+      goToStep(2);
+    }
 
+    // স্টেপ ২ কেক কাটা
+    let cakeCut = false;
+    function cutCake() {
+      if (cakeCut) return;
+      cakeCut = true;
+      document.getElementById('flame').style.display = 'none';
+      document.getElementById('cakeStatus').innerHTML = "🎉 শুভ জন্মদিন! মোমবাতি নিভে গেল এবং কেক কাটা হলো!";
+      document.getElementById('cakeNextBtn').style.display = 'inline-block';
+      blastLove();
+    }
+
+    // লাভ ও বেলুন ওড়ানোর ফাংশন
+    const emojis = ['🎈', '💖', '🎉', '🎂', '✨', '💐', '🥳'];
     function blastLove() {
-      for (let i = 0; i < 30; i++) {
-        setTimeout(createFloating, i * 80);
+      for (let i = 0; i < 35; i++) {
+        setTimeout(createFloating, i * 70);
       }
     }
 
     function createFloating() {
       const el = document.createElement('div');
       el.className = 'floating-item';
-      el.innerText = icons[Math.floor(Math.random() * icons.length)];
+      el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
       el.style.left = Math.random() * 95 + 'vw';
-      el.style.animationDuration = (Math.random() * 2.5 + 3) + 's';
+      el.style.animationDuration = (Math.random() * 2 + 3) + 's';
       document.body.appendChild(el);
-
-      setTimeout(() => el.remove(), 5500);
+      setTimeout(() => el.remove(), 4500);
     }
-
-    // পেজ খুললে স্বয়ংক্রিয়ভাবে বেলুন ও লাভ উড়বে
-    window.onload = function() {
-      blastLove();
-    };
   </script>
 </body>
-</html>
+  </html>
+  
