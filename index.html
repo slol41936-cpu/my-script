@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Happy Birthday!</title>
+  <title>Happy Birthday To You! 🎂</title>
   <style>
     * {
       box-sizing: border-box;
@@ -12,133 +12,235 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     body {
-      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+      background: radial-gradient(circle at top, #2b1055, #7597de);
+      color: #fff;
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 20px;
-      overflow: hidden;
-      position: relative;
+      padding: 20px 10px;
+      overflow-x: hidden;
     }
-    .card {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 40px 30px;
-      border-radius: 20px;
-      text-align: center;
-      max-width: 420px;
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 25px;
+      padding: 30px 20px;
+      max-width: 520px;
       width: 100%;
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
       position: relative;
-      z-index: 10;
+      z-index: 5;
     }
-    .cake {
-      font-size: 65px;
-      margin-bottom: 12px;
+    .badge {
       display: inline-block;
-      animation: bounce 2s infinite;
+      background: #ff4081;
+      padding: 6px 18px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      animation: pulse 1.8s infinite;
     }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
     h1 {
-      color: #d81b60;
-      font-size: 26px;
+      font-size: 28px;
       margin-bottom: 15px;
-      line-height: 1.3;
+      color: #fff;
+      text-shadow: 0 0 15px rgba(255, 105, 180, 0.8);
     }
-    p {
-      color: #555;
-      font-size: 16px;
-      line-height: 1.6;
+    .profile-wrap {
+      width: 140px;
+      height: 140px;
+      margin: 0 auto 15px;
+      border-radius: 50%;
+      border: 4px solid #ff4081;
+      overflow: hidden;
+      box-shadow: 0 0 25px rgba(255, 64, 129, 0.6);
+      animation: floatImg 3s ease-in-out infinite;
+    }
+    @keyframes floatImg {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .profile-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .message {
+      font-size: 15px;
+      line-height: 1.7;
+      color: #f1f1f1;
       margin-bottom: 25px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      border-radius: 12px;
     }
-    button {
-      background: linear-gradient(45deg, #ff4081, #e91e63);
+    /* ছবি গ্যালারি */
+    .section-title {
+      font-size: 18px;
+      margin: 20px 0 12px;
+      color: #ffe600;
+      text-align: left;
+    }
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .gallery img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.3s;
+    }
+    .gallery img:hover {
+      transform: scale(1.04);
+    }
+    /* ভিডিও সেকশন */
+    .video-container {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .video-container iframe, .video-container video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: 15px;
+    }
+    /* বাটন ও কন্ট্রোল */
+    .action-btn {
+      background: linear-gradient(45deg, #ff4081, #ff9100);
       color: #fff;
       border: none;
-      padding: 14px 32px;
-      font-size: 17px;
+      padding: 12px 26px;
+      font-size: 16px;
       font-weight: bold;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 6px 18px rgba(233, 30, 99, 0.4);
-      transition: transform 0.15s ease;
+      box-shadow: 0 8px 20px rgba(255, 64, 129, 0.4);
+      margin: 6px;
+      transition: transform 0.2s;
     }
-    button:active {
-      transform: scale(0.95);
+    .action-btn:active {
+      transform: scale(0.96);
     }
-    /* কনফেটি কণা */
-    .confetti {
+    /* ফ্লোটিং এফেক্ট */
+    .floating-item {
       position: fixed;
-      width: 10px;
-      height: 10px;
-      top: -10px;
-      z-index: 999;
+      bottom: -30px;
+      font-size: 24px;
+      z-index: 1;
       pointer-events: none;
-      animation: fall linear forwards;
+      animation: rise 5s linear forwards;
     }
-    @keyframes fall {
-      0% {
-        transform: translateY(0) rotate(0deg);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(105vh) rotate(720deg);
-        opacity: 0;
-      }
+    @keyframes rise {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      100% { transform: translateY(-110vh) scale(1.4); opacity: 0; }
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <div class="cake">🎂</div>
-    <!-- এখানে আপনার বন্ধুর নাম দিন -->
-    <h1>শুভ জন্মদিন, [বন্ধুর নাম]! 🎉</h1>
-    
-    <p>
-      জীবনের প্রতিটি দিন আনন্দে ভরে উঠুক। তোমার সব স্বপ্ন সত্যি হোক। দারুণ কাটুক তোমার এই বিশেষ দিনটি!
-    </p>
+  <!-- ব্যাকগ্রাউন্ড মিউজিক (লোকাল বা অনলাইন লিঙ্ক দিতে পারেন) -->
+  <audio id="bgMusic" loop src="https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=happy-birthday-155461.mp3"></audio>
 
-    <button onclick="celebrate()">সেলিব্রেট করো! 🎈</button>
+  <div class="container">
+    <div class="badge">Happy Birthday! 🎈</div>
+
+    <!-- বন্ধুর প্রধান ছবি -->
+    <div class="profile-wrap">
+      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80" alt="Friend Profile" id="mainPhoto">
+    </div>
+
+    <!-- বন্ধুর নাম -->
+    <h1>শুভ জন্মদিন, [বন্ধুর নাম]! 🎂✨</h1>
+
+    <!-- আন্তরিক শুভেচ্ছা বার্তা -->
+    <div class="message">
+      আজকের দিনটি শুধুই তোমার জন্য স্পেশাল! তোমার জীবনের আগামী দিনগুলো স্বপ্ন, ভালোবাসা ও অন্তহীন হাসিখুশিতে ভরে উঠুক। সর্বদা এভাবেই সাথে থেকো!
+    </div>
+
+    <!-- ছবির স্মৃতি গ্যালারি -->
+    <div class="section-title">📸 আমাদের সুন্দর মুহূর্তগুলো:</div>
+    <div class="gallery">
+      <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80" alt="Memory 1">
+      <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=400&q=80" alt="Memory 2">
+      <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80" alt="Memory 3">
+      <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80" alt="Memory 4">
+    </div>
+
+    <!-- ইউটিউব ভিডিও বা স্পেশাল ভিডিও মেমোরি -->
+    <div class="section-title">🎬 একটি বিশেষ উপহার:</div>
+    <div class="video-container">
+      <!-- YouTube ভিডিওর embed লিঙ্ক বসান -->
+      <iframe src="https://www.youtube.com/embed/nl62hhiBMOM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+
+    <!-- মিউজিক ও সেলিব্রেশন বাটন -->
+    <div>
+      <button class="action-btn" onclick="toggleMusic()">🎵 গান চালু / বন্ধ</button>
+      <button class="action-btn" onclick="blastLove()">💖 ভালোবাসা পাঠাও!</button>
+    </div>
   </div>
 
   <script>
-    const colors = ['#e91e63', '#ff4081', '#00e676', '#ffeb3b', '#00e5ff', '#9c27b0', '#ff9800'];
+    const music = document.getElementById('bgMusic');
+    let isPlaying = false;
 
-    function celebrate() {
-      for (let i = 0; i < 70; i++) {
-        createParticle();
+    function toggleMusic() {
+      if (isPlaying) {
+        music.pause();
+        isPlaying = false;
+      } else {
+        music.play();
+        isPlaying = true;
       }
     }
 
-    function createParticle() {
-      const p = document.createElement('div');
-      p.className = 'confetti';
-      p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      p.style.left = Math.random() * 100 + 'vw';
-      
-      const size = Math.random() * 8 + 6;
-      p.style.width = size + 'px';
-      p.style.height = (size * (Math.random() > 0.5 ? 1 : 1.6)) + 'px';
-      p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-      
-      const duration = Math.random() * 2 + 2;
-      p.style.animationDuration = duration + 's';
-      p.style.animationDelay = (Math.random() * 0.4) + 's';
+    const icons = ['🎈', '💖', '🎂', '🎉', '✨', '💐', '🥳'];
 
-      document.body.appendChild(p);
-
-      setTimeout(() => {
-        p.remove();
-      }, (duration + 0.5) * 1000);
+    function blastLove() {
+      for (let i = 0; i < 30; i++) {
+        setTimeout(createFloating, i * 80);
+      }
     }
 
-    // পেজ লোড হলেই স্বয়ংক্রিয়ভাবে একবার ব্লাস্ট হবে
+    function createFloating() {
+      const el = document.createElement('div');
+      el.className = 'floating-item';
+      el.innerText = icons[Math.floor(Math.random() * icons.length)];
+      el.style.left = Math.random() * 95 + 'vw';
+      el.style.animationDuration = (Math.random() * 2.5 + 3) + 's';
+      document.body.appendChild(el);
+
+      setTimeout(() => el.remove(), 5500);
+    }
+
+    // পেজ খুললে স্বয়ংক্রিয়ভাবে বেলুন ও লাভ উড়বে
     window.onload = function() {
-      celebrate();
+      blastLove();
     };
   </script>
 </body>
