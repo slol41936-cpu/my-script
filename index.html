@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Happy Birthday!</title>
-  <!-- Canvas Confetti লাইব্রেরি -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -14,30 +12,29 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     body {
-      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
       min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 20px;
+      overflow: hidden;
+      position: relative;
     }
     .card {
       background: rgba(255, 255, 255, 0.95);
       padding: 40px 30px;
       border-radius: 20px;
       text-align: center;
-      max-width: 450px;
+      max-width: 420px;
       width: 100%;
       box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-      animation: popIn 0.8s ease-out;
-    }
-    @keyframes popIn {
-      0% { transform: scale(0.8); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
+      position: relative;
+      z-index: 10;
     }
     .cake {
-      font-size: 60px;
-      margin-bottom: 10px;
+      font-size: 65px;
+      margin-bottom: 12px;
       display: inline-block;
       animation: bounce 2s infinite;
     }
@@ -47,8 +44,9 @@
     }
     h1 {
       color: #d81b60;
-      font-size: 28px;
+      font-size: 26px;
       margin-bottom: 15px;
+      line-height: 1.3;
     }
     p {
       color: #555;
@@ -60,17 +58,36 @@
       background: linear-gradient(45deg, #ff4081, #e91e63);
       color: #fff;
       border: none;
-      padding: 12px 28px;
-      font-size: 16px;
+      padding: 14px 32px;
+      font-size: 17px;
       font-weight: bold;
       border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 5px 15px rgba(233, 30, 99, 0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 6px 18px rgba(233, 30, 99, 0.4);
+      transition: transform 0.15s ease;
     }
-    button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 8px 20px rgba(233, 30, 99, 0.6);
+    button:active {
+      transform: scale(0.95);
+    }
+    /* কনফেটি কণা */
+    .confetti {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      top: -10px;
+      z-index: 999;
+      pointer-events: none;
+      animation: fall linear forwards;
+    }
+    @keyframes fall {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(105vh) rotate(720deg);
+        opacity: 0;
+      }
     }
   </style>
 </head>
@@ -78,34 +95,50 @@
 
   <div class="card">
     <div class="cake">🎂</div>
-    <!-- বন্ধুর নাম এখানে বসান -->
+    <!-- এখানে আপনার বন্ধুর নাম দিন -->
     <h1>শুভ জন্মদিন, [বন্ধুর নাম]! 🎉</h1>
     
-    <!-- আপনার শুভেচ্ছাবার্তা -->
     <p>
       জীবনের প্রতিটি দিন আনন্দে ভরে উঠুক। তোমার সব স্বপ্ন সত্যি হোক। দারুণ কাটুক তোমার এই বিশেষ দিনটি!
     </p>
 
-    <button onclick="launchConfetti()">সেলিব্রেট করো! 🎈</button>
+    <button onclick="celebrate()">সেলিব্রেট করো! 🎈</button>
   </div>
 
   <script>
-    function launchConfetti() {
-      // কনফেটি ব্লাস্ট ইফেক্ট
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
+    const colors = ['#e91e63', '#ff4081', '#00e676', '#ffeb3b', '#00e5ff', '#9c27b0', '#ff9800'];
+
+    function celebrate() {
+      for (let i = 0; i < 70; i++) {
+        createParticle();
+      }
     }
 
-    // পেজ লোড হওয়ার সাথে সাথে হালকা কনফেটি
+    function createParticle() {
+      const p = document.createElement('div');
+      p.className = 'confetti';
+      p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      p.style.left = Math.random() * 100 + 'vw';
+      
+      const size = Math.random() * 8 + 6;
+      p.style.width = size + 'px';
+      p.style.height = (size * (Math.random() > 0.5 ? 1 : 1.6)) + 'px';
+      p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      
+      const duration = Math.random() * 2 + 2;
+      p.style.animationDuration = duration + 's';
+      p.style.animationDelay = (Math.random() * 0.4) + 's';
+
+      document.body.appendChild(p);
+
+      setTimeout(() => {
+        p.remove();
+      }, (duration + 0.5) * 1000);
+    }
+
+    // পেজ লোড হলেই স্বয়ংক্রিয়ভাবে একবার ব্লাস্ট হবে
     window.onload = function() {
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 }
-      });
+      celebrate();
     };
   </script>
 </body>
